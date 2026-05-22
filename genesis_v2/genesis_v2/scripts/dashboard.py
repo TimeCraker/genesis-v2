@@ -169,42 +169,13 @@ st.markdown("""
 html, body, [class*="css"] { font-family: var(--font-body) !important; color: var(--ink); }
 h1, h2, h3, h4, h5, h6 { font-family: var(--font-body) !important; font-weight: 600 !important; letter-spacing: -0.025em !important; color: var(--ink) !important; }
 
-/* ── Page Background & Navbar Spacing ── */
+/* ── Page Background ── */
 div[data-testid="stAppViewContainer"] { background: var(--canvas) !important; }
-section[data-testid="stMain"] { padding-top: 64px !important; }
 
-/* ── Navbar ── */
-.gv2-navbar {
-  position: fixed; top: 0; left: 0; right: 0; z-index: 9999;
-  height: 56px;
-  background: rgba(255,255,255,0.72);
-  backdrop-filter: saturate(180%) blur(20px);
-  -webkit-backdrop-filter: saturate(180%) blur(20px);
-  border-bottom: 1px solid var(--divider);
-  display: flex; align-items: center; justify-content: space-between;
-  padding: 0 32px;
-  font-family: var(--font-body);
-}
-.gv2-logo { font-weight: 600; font-size: 17px; letter-spacing: -0.02em; color: var(--ink); }
-.gv2-nav-right { display: flex; align-items: center; gap: 12px; }
-.gv2-gh-btn {
-  display: inline-flex; align-items: center; gap: 6px;
-  background: var(--surface); border: 1px solid var(--border);
-  border-radius: var(--radius-pill); padding: 6px 14px;
-  font-size: 13px; font-weight: 500; color: var(--ink);
-  text-decoration: none; transition: all 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
-  cursor: pointer;
-}
-.gv2-gh-btn:hover { transform: translateY(-1px); box-shadow: var(--shadow-hover); background: #fff; }
-.gv2-gh-btn svg { flex-shrink: 0; }
-.gv2-contact-btn {
-  color: var(--ink-secondary); font-size: 13px; font-weight: 500;
-  text-decoration: none; padding: 6px 10px;
-  transition: color 0.2s ease;
-}
-.gv2-contact-btn:hover { color: var(--accent); }
+/* Sidebar styling */
+section[data-testid="stSidebar"] { background: var(--surface) !important; }
 
-/* ── Modal ── */
+/* ── Modal (used by st.dialog) ── */
 .gv2-modal-overlay {
   position: fixed; inset: 0; z-index: 10001;
   background: rgba(0,0,0,0.25);
@@ -292,6 +263,25 @@ div[data-testid="stProgressBar"] > div {
   border-radius: var(--radius-pill) !important;
 }
 
+/* ── Section Headers ── */
+.gv2-section {
+  scroll-margin-top: 24px;
+  padding-top: 8px; margin-bottom: 24px;
+}
+.gv2-section-title {
+  font-size: 28px; font-weight: 600; letter-spacing: -0.03em;
+  color: var(--ink); margin: 0 0 4px; line-height: 1.15;
+}
+.gv2-section-subtitle {
+  font-size: 15px; color: var(--ink-secondary); margin: 0;
+  letter-spacing: -0.01em; line-height: 1.4;
+}
+.gv2-section-divider {
+  height: 1px; background: var(--divider); margin: 32px 0;
+  border: none;
+}
+.gv2-section-enter { animation: fadeSlideUp 0.6s cubic-bezier(0.22, 1, 0.36, 1) both; }
+
 /* ── Component Overrides ── */
 
 /* Inputs */
@@ -309,23 +299,6 @@ div[data-testid="stProgressBar"] > div {
   box-shadow: 0 0 0 3px rgba(0,102,204,0.12) !important;
 }
 div[data-baseweb="select"] > div { border-radius: var(--radius-btn) !important; }
-
-/* Tabs */
-.stTabs [data-baseweb="tab-list"] {
-  gap: 0; border-radius: var(--radius-card); padding: 4px;
-  background: var(--surface) !important; border: none !important;
-}
-.stTabs [data-baseweb="tab"] {
-  border-radius: var(--radius-btn); padding: 10px 20px;
-  font-weight: 500 !important; font-size: 14px;
-  color: var(--ink-secondary) !important;
-  border: none !important; background: transparent !important;
-  transition: all 0.2s ease !important;
-}
-.stTabs [aria-selected="true"] {
-  background: white !important; color: var(--ink) !important;
-  box-shadow: 0 1px 3px rgba(0,0,0,0.08) !important;
-}
 
 /* Buttons — spring feel */
 .stButton > button {
@@ -758,10 +731,17 @@ def _generate_demo_status() -> dict:
 # ─── Backend Connectivity Check ────────────────────────────────────
 
 def _check_backend_connectivity(island_backends: list[str]) -> tuple[bool, str]:
-    """Quick-check if non-mock backends are reachable. Returns (ok, message)."""
+    """Check if non-mock backends have API keys configured and are reachable."""
     non_mock = [b for b in island_backends if b != "mock"]
     if not non_mock:
         return True, ""
+    # Step 1: Check API keys
+    for b in set(non_mock):
+        bp = BACKEND_PRESETS[b]
+        env_key = bp.get("api_key_env", "")
+        if env_key and not os.environ.get(env_key):
+            return False, f"{bp['label']} API key not configured ({env_key})"
+    # Step 2: Check connectivity
     try:
         import httpx
         for b in set(non_mock):
@@ -783,34 +763,131 @@ def _check_backend_connectivity(island_backends: list[str]) -> tuple[bool, str]:
     return True, ""
 
 
-# ─── Navbar + Page Title + Tabs ────────────────────────────────────
+# ─── Backend Unreachable Dialog ──────────────────────────────────
 
-# Inject Inter font
+@st.dialog("Backend Unreachable / 后端未启动", width="small")
+def _backend_dialog():
+    """Modal dialog shown when non-mock LLM backend is unreachable."""
+    err = st.session_state.get("backend_err_msg", "")
+    st.markdown(f"**LLM backend is not reachable** ({err})")
+    st.markdown(
+        "LLM 后端不可达。请先配置并启动后端，或切换为 Mock 模式运行。"
+    )
+    st.markdown("---")
+    st.link_button(
+        "Explore on GitHub / 探索项目",
+        "https://github.com/TimeCraker/genesis-v2",
+        type="primary",
+        use_container_width=True,
+    )
+    if st.button("Switch to Mock / 切换为 Mock 模式", use_container_width=True):
+        st.session_state["switch_to_mock"] = True
+        st.session_state.pop("backend_err_msg", None)
+        st.rerun()
+
+
+# ─── Sidebar / 侧边栏导航 ────────────────────────────────────────
+# st.markdown strips <script> tags, so we use st.components.v1.html for JS.
+
+_star_count = _fetch_github_stars()
+_gh_svg = '<svg width="15" height="15" viewBox="0 0 16 16" fill="currentColor"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/></svg>'
+
+import streamlit.components.v1 as components
+
+_sidebar_html = f"""
+<div style="font-family:'Inter',-apple-system,BlinkMacSystemFont,sans-serif;padding:4px 0;">
+  <div style="margin-bottom:20px;">
+    <div style="font-size:20px;font-weight:600;letter-spacing:-0.03em;color:#1d1d1f;">Genesis v2</div>
+    <div style="font-size:12px;color:#86868b;margin-top:2px;">AGI Evolution Platform</div>
+  </div>
+
+  <div style="margin-bottom:16px;">
+    <a class="gv2-nav gv2-nav-head" data-target="gv2-sec-physics" style="display:block;padding:8px 10px;margin:1px 0 4px;border-radius:6px;font-size:14px;font-weight:600;color:#1d1d1f;text-decoration:none;cursor:pointer;transition:background 0.15s;">Configuration / 配置</a>
+    <a class="gv2-nav" data-target="gv2-sec-physics" style="display:block;padding:6px 10px 6px 20px;margin:1px 0;border-radius:6px;font-size:13px;color:#6e6e73;text-decoration:none;cursor:pointer;transition:background 0.15s;">Physics / 物理常数</a>
+    <a class="gv2-nav" data-target="gv2-sec-islands" style="display:block;padding:6px 10px 6px 20px;margin:1px 0;border-radius:6px;font-size:13px;color:#6e6e73;text-decoration:none;cursor:pointer;transition:background 0.15s;">Islands / 岛屿拓扑</a>
+    <a class="gv2-nav" data-target="gv2-sec-keys" style="display:block;padding:6px 10px 6px 20px;margin:1px 0;border-radius:6px;font-size:13px;color:#6e6e73;text-decoration:none;cursor:pointer;transition:background 0.15s;">API Keys / 密钥</a>
+  </div>
+
+  <div style="margin-bottom:16px;">
+    <a class="gv2-nav gv2-nav-head" data-target="gv2-sec-launch" style="display:block;padding:8px 10px;margin:1px 0 4px;border-radius:6px;font-size:14px;font-weight:600;color:#1d1d1f;text-decoration:none;cursor:pointer;transition:background 0.15s;">Experiment / 实验</a>
+    <a class="gv2-nav" data-target="gv2-sec-launch" style="display:block;padding:6px 10px 6px 20px;margin:1px 0;border-radius:6px;font-size:13px;color:#6e6e73;text-decoration:none;cursor:pointer;transition:background 0.15s;">Launch / 启动</a>
+    <a class="gv2-nav" data-target="gv2-sec-seeds" style="display:block;padding:6px 10px 6px 20px;margin:1px 0;border-radius:6px;font-size:13px;color:#6e6e73;text-decoration:none;cursor:pointer;transition:background 0.15s;">Seeds / 种子库</a>
+  </div>
+
+  <div style="margin-bottom:16px;">
+    <a class="gv2-nav gv2-nav-head" data-target="gv2-sec-status" style="display:block;padding:8px 10px;margin:1px 0 4px;border-radius:6px;font-size:14px;font-weight:600;color:#1d1d1f;text-decoration:none;cursor:pointer;transition:background 0.15s;">Monitor / 监控</a>
+    <a class="gv2-nav" data-target="gv2-sec-status" style="display:block;padding:6px 10px 6px 20px;margin:1px 0;border-radius:6px;font-size:13px;color:#6e6e73;text-decoration:none;cursor:pointer;transition:background 0.15s;">Status / 状态</a>
+    <a class="gv2-nav" data-target="gv2-sec-charts" style="display:block;padding:6px 10px 6px 20px;margin:1px 0;border-radius:6px;font-size:13px;color:#6e6e73;text-decoration:none;cursor:pointer;transition:background 0.15s;">Charts / 图表</a>
+    <a class="gv2-nav" data-target="gv2-sec-logs" style="display:block;padding:6px 10px 6px 20px;margin:1px 0;border-radius:6px;font-size:13px;color:#6e6e73;text-decoration:none;cursor:pointer;transition:background 0.15s;">Logs / 日志</a>
+  </div>
+
+  <div style="border-top:1px solid #e8e8ed;padding-top:14px;margin-top:6px;">
+    <a href="https://github.com/TimeCraker/genesis-v2" target="_blank" rel="noopener"
+       style="display:flex;align-items:center;justify-content:center;gap:8px;background:#1d1d1f;color:#fff;
+       border-radius:8px;padding:10px 16px;font-size:13px;font-weight:500;text-decoration:none;">
+      {_gh_svg}<span>GitHub</span>
+    </a>
+    <a href="https://github.com/TimeCraker/genesis-v2" target="_blank" rel="noopener"
+       style="display:block;text-align:center;margin-top:6px;font-size:12px;color:#86868b;text-decoration:none;">
+      ⭐ {_star_count if _star_count is not None else "—"} stars
+    </a>
+  </div>
+
+  <div style="border-top:1px solid #e8e8ed;margin-top:14px;padding-top:14px;">
+    <div style="font-size:12px;color:#86868b;line-height:1.5;text-align:center;">
+      Want to collaborate?<br>想要合作探讨？
+    </div>
+    <div style="text-align:center;margin-top:8px;">
+      <a href="mailto:timecraker@foxmail.com"
+         style="display:inline-block;background:#f5f5f7;border:1px solid #d2d2d7;border-radius:6px;
+         padding:7px 14px;font-size:12px;font-weight:500;color:#1d1d1f;text-decoration:none;">
+        timecraker@foxmail.com
+      </a>
+    </div>
+  </div>
+</div>
+
+<style>
+  .gv2-nav:hover {{ background: rgba(0,0,0,0.05) !important; }}
+  .gv2-nav.gv2-active {{ background: rgba(0,102,204,0.08); color: #0066cc !important; font-weight: 500; }}
+</style>
+
+<script>
+(function() {{
+  var P = window.parent.document;
+  // Scroll to target
+  window.gv2scroll = function(id) {{
+    var el = P.getElementById(id);
+    if (el) {{ el.scrollIntoView({{behavior:'smooth',block:'start'}}); }}
+    // Update active state
+    var items = document.querySelectorAll('.gv2-nav');
+    for (var i = 0; i < items.length; i++) {{
+      items[i].classList.toggle('gv2-active', items[i].getAttribute('data-target') === id);
+    }}
+  }};
+  // Bind clicks
+  var links = document.querySelectorAll('.gv2-nav');
+  for (var i = 0; i < links.length; i++) {{
+    links[i].addEventListener('click', function(e) {{
+      e.preventDefault();
+      gv2scroll(this.getAttribute('data-target'));
+    }});
+  }}
+}})();
+</script>
+"""
+
+with st.sidebar:
+    components.html(_sidebar_html, height=750, scrolling=False)
+
+
+# ─── Page Header ─────────────────────────────────────────────────
+
 st.markdown(
     '<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">',
     unsafe_allow_html=True,
 )
 
-# GitHub stars
-_star_count = _fetch_github_stars()
-_star_display = f"{_star_count:,}" if _star_count is not None else ""
-
-_GITHUB_SVG = '<svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/></svg>'
-
-st.markdown(f"""
-<div class="gv2-navbar">
-  <span class="gv2-logo">Genesis v2</span>
-  <div class="gv2-nav-right">
-    <a href="https://github.com/TimeCraker/genesis-v2" class="gv2-gh-btn" target="_blank" rel="noopener">
-      {_GITHUB_SVG}
-      <span>{_star_display}</span>
-    </a>
-    <a href="mailto:timecraker@foxmail.com" class="gv2-contact-btn">timecraker@foxmail.com</a>
-  </div>
-</div>
-""", unsafe_allow_html=True)
-
-# Animated page title
 st.markdown("""
 <div class="anim-title" style="padding-top: 8px;">
   <h1 style="font-size: 2.5rem; font-weight: 600; letter-spacing: -0.025em;
@@ -824,251 +901,256 @@ st.markdown("""
 </div>
 """, unsafe_allow_html=True)
 
-tab_cfg, tab_run, tab_mon = st.tabs([
-    "Config / 配置",
-    "Run / 启动",
-    "Monitor / 监控",
-])
-
 
 # ================================================================
 # TAB 1: Config / 配置
 # ================================================================
-with tab_cfg:
-    cfg = _load_yaml()
-    physics = cfg.get("physics", {})
-    genome = cfg.get("genome", {})
-    evolution = cfg.get("evolution", {})
-    population = cfg.get("population", {})
-    islands_cfg = population.get("islands", [])
 
-    # ── Hardware Preset / 硬件预设 ──
-    st.subheader("Hardware Preset / 硬件预设")
+# ================================================================
+# Section: Configuration / 配置
+# ================================================================
+st.markdown("""<div id="gv2-sec-physics" class="gv2-section gv2-section-enter">
+  <div class="gv2-section-title">Configuration / 配置</div>
+  <div class="gv2-section-subtitle">Set physics constants, island topology, and API keys before launching.</div>
+</div>""", unsafe_allow_html=True)
 
-    hw_key = st.radio(
-        "Select preset / 选择预设",
-        options=["low", "standard", "high"],
-        format_func=lambda k: HARDWARE_PRESETS[k]["label"],
-        horizontal=True,
-        label_visibility="collapsed",
+cfg = _load_yaml()
+physics = cfg.get("physics", {})
+genome = cfg.get("genome", {})
+evolution = cfg.get("evolution", {})
+population = cfg.get("population", {})
+islands_cfg = population.get("islands", [])
+
+# ── Hardware Preset / 硬件预设 ──
+st.markdown('<div id="gv2-sec-physics" style="scroll-margin-top:24px;"></div>', unsafe_allow_html=True)
+st.subheader("Hardware Preset / 硬件预设")
+
+hw_key = st.radio(
+    "Select preset / 选择预设",
+    options=["low", "standard", "high"],
+    format_func=lambda k: HARDWARE_PRESETS[k]["label"],
+    horizontal=True,
+    label_visibility="collapsed",
+)
+hw = HARDWARE_PRESETS[hw_key]
+
+c1, c2, c3, c4 = st.columns(4)
+c1.metric("Agents / 代理数", hw["agents"])
+c2.metric("Generations / 代数", hw["generations"])
+c3.metric("Ticks/Gen / 每代tick", hw["ticks"])
+c4.metric("Node Dim / 节点维度", hw["node_dim"])
+
+st.divider()
+
+# ────────────────────────────────────────────────────────────
+# Island Config / 岛屿配置 (BEFORE API config)
+# ────────────────────────────────────────────────────────────
+st.markdown('<div id="gv2-sec-islands" style="scroll-margin-top:24px;"></div>', unsafe_allow_html=True)
+st.subheader("Islands / 岛屿配置")
+st.caption(
+    "Each island independently selects its LLM backend. "
+    "Different islands can use different models. / "
+    "每个岛屿独立选择 LLM 后端。不同岛屿可以使用不同的模型。"
+)
+
+island_configs: list[dict] = []
+island_backends: list[str] = []
+
+if islands_cfg:
+    cols = st.columns(min(len(islands_cfg), 4))
+    for i, isl in enumerate(islands_cfg):
+        with cols[i % 4]:
+            name = isl.get("name", f"Island-{i}")
+            st.markdown(f"### {name}")
+
+            # Backend dropdown — each island independent
+            backend_names = list(BACKEND_PRESETS.keys())
+            cur_backend = isl.get("backend", "mock")
+            if cur_backend not in BACKEND_PRESETS:
+                cur_backend = "mock"
+            backend = st.selectbox(
+                "Backend / 后端",
+                options=backend_names,
+                index=backend_names.index(cur_backend),
+                format_func=lambda k: BACKEND_PRESETS[k]["label"],
+                key=f"isl_backend_{i}",
+            )
+
+            size = st.number_input(
+                "Pop / 种群",
+                value=int(isl.get("size", hw["agents"])),
+                min_value=2, max_value=1000, step=5,
+                key=f"isl_size_{i}",
+            )
+            mut = st.slider(
+                "Mut Rate / 变异率",
+                min_value=0.01, max_value=1.0,
+                value=float(isl.get("mutation_rate", hw.get("mutation_rate", 0.15))),
+                step=0.05,
+                key=f"isl_mut_{i}",
+            )
+
+            if backend == "mock":
+                st.caption("Free / 免费 — math CA environment")
+            else:
+                bp = BACKEND_PRESETS[backend]
+                st.caption(f"API: {bp['base_url'][:40]}...")
+
+            island_configs.append({
+                "name": name,
+                "size": size,
+                "mutation_rate": mut,
+                "backend": backend,
+            })
+            island_backends.append(backend)
+else:
+    st.warning("No islands in config. / 配置中无岛屿。")
+
+st.divider()
+
+# ────────────────────────────────────────────────────────────
+# API Keys — Auto-generated based on unique backends
+# API 密钥 — 根据岛屿选择的后端自动生成配置卡片
+# ────────────────────────────────────────────────────────────
+unique_backends = sorted(set(b for b in island_backends if b != "mock"))
+mock_count = sum(1 for b in island_backends if b == "mock")
+
+st.markdown('<div id="gv2-sec-keys" style="scroll-margin-top:24px;"></div>', unsafe_allow_html=True)
+st.subheader("API Keys / API 密钥配置")
+
+# Always initialize so Save button works even when all islands are mock
+api_values: dict[str, dict] = {}
+
+if not unique_backends:
+    st.info(
+        "All islands use Mock (free). No API keys needed. / "
+        "所有岛屿使用 Mock（免费）。不需要 API 密钥。"
     )
-    hw = HARDWARE_PRESETS[hw_key]
-
-    c1, c2, c3, c4 = st.columns(4)
-    c1.metric("Agents / 代理数", hw["agents"])
-    c2.metric("Generations / 代数", hw["generations"])
-    c3.metric("Ticks/Gen / 每代tick", hw["ticks"])
-    c4.metric("Node Dim / 节点维度", hw["node_dim"])
-
-    st.divider()
-
-    # ────────────────────────────────────────────────────────────
-    # Island Config / 岛屿配置 (BEFORE API config)
-    # ────────────────────────────────────────────────────────────
-    st.subheader("Islands / 岛屿配置")
+else:
     st.caption(
-        "Each island independently selects its LLM backend. "
-        "Different islands can use different models. / "
-        "每个岛屿独立选择 LLM 后端。不同岛屿可以使用不同的模型。"
+        f"{len(unique_backends)} backend(s) selected across islands. "
+        f"Configure API keys below. / "
+        f"岛屿共选择了 {len(unique_backends)} 个后端，请在下方配置 API 密钥。"
     )
 
-    island_configs: list[dict] = []
-    island_backends: list[str] = []
+    for idx, backend_key in enumerate(unique_backends):
+        bp = BACKEND_PRESETS[backend_key]
+        env_key = bp["api_key_env"]
+        # Which islands use this backend?
+        using_islands = [
+            island_configs[j]["name"]
+            for j, b in enumerate(island_backends)
+            if b == backend_key
+        ]
+        island_names_str = ", ".join(using_islands)
 
-    if islands_cfg:
-        cols = st.columns(min(len(islands_cfg), 4))
-        for i, isl in enumerate(islands_cfg):
-            with cols[i % 4]:
-                name = isl.get("name", f"Island-{i}")
-                st.markdown(f"### {name}")
+        with st.container(border=True):
+            st.markdown(f"**{bp['label']}** — used by: {island_names_str}")
 
-                # Backend dropdown — each island independent
-                backend_names = list(BACKEND_PRESETS.keys())
-                cur_backend = isl.get("backend", "mock")
-                if cur_backend not in BACKEND_PRESETS:
-                    cur_backend = "mock"
-                backend = st.selectbox(
-                    "Backend / 后端",
-                    options=backend_names,
-                    index=backend_names.index(cur_backend),
-                    format_func=lambda k: BACKEND_PRESETS[k]["label"],
-                    key=f"isl_backend_{i}",
-                )
-
-                size = st.number_input(
-                    "Pop / 种群",
-                    value=int(isl.get("size", hw["agents"])),
-                    min_value=2, max_value=1000, step=5,
-                    key=f"isl_size_{i}",
-                )
-                mut = st.slider(
-                    "Mut Rate / 变异率",
-                    min_value=0.01, max_value=1.0,
-                    value=float(isl.get("mutation_rate", hw.get("mutation_rate", 0.15))),
-                    step=0.05,
-                    key=f"isl_mut_{i}",
-                )
-
-                if backend == "mock":
-                    st.caption("Free / 免费 — math CA environment")
-                else:
-                    bp = BACKEND_PRESETS[backend]
-                    st.caption(f"API: {bp['base_url'][:40]}...")
-
-                island_configs.append({
-                    "name": name,
-                    "size": size,
-                    "mutation_rate": mut,
-                    "backend": backend,
-                })
-                island_backends.append(backend)
-    else:
-        st.warning("No islands in config. / 配置中无岛屿。")
-
-    st.divider()
-
-    # ────────────────────────────────────────────────────────────
-    # API Keys — Auto-generated based on unique backends
-    # API 密钥 — 根据岛屿选择的后端自动生成配置卡片
-    # ────────────────────────────────────────────────────────────
-    unique_backends = sorted(set(b for b in island_backends if b != "mock"))
-    mock_count = sum(1 for b in island_backends if b == "mock")
-
-    st.subheader("API Keys / API 密钥配置")
-
-    # Always initialize so Save button works even when all islands are mock
-    api_values: dict[str, dict] = {}
-
-    if not unique_backends:
-        st.info(
-            "All islands use Mock (free). No API keys needed. / "
-            "所有岛屿使用 Mock（免费）。不需要 API 密钥。"
-        )
-    else:
-        st.caption(
-            f"{len(unique_backends)} backend(s) selected across islands. "
-            f"Configure API keys below. / "
-            f"岛屿共选择了 {len(unique_backends)} 个后端，请在下方配置 API 密钥。"
-        )
-
-        for idx, backend_key in enumerate(unique_backends):
-            bp = BACKEND_PRESETS[backend_key]
-            env_key = bp["api_key_env"]
-            # Which islands use this backend?
-            using_islands = [
-                island_configs[j]["name"]
-                for j, b in enumerate(island_backends)
-                if b == backend_key
-            ]
-            island_names_str = ", ".join(using_islands)
-
-            with st.container(border=True):
-                st.markdown(f"**{bp['label']}** — used by: {island_names_str}")
-
-                ac1, ac2 = st.columns(2)
-                with ac1:
-                    api_url = st.text_input(
-                        "API URL / API 地址",
-                        value=bp["base_url"],
-                        key=f"api_url_{backend_key}",
-                    )
-                    _help(
-                        "兼容 OpenAI 格式的 API 地址，已自动填充",
-                        "OpenAI-compatible endpoint, auto-filled",
-                    )
-                with ac2:
-                    # Text input — user can type any model name
-                    model_hint = ", ".join(bp["models"]) if bp["models"] else ""
-                    api_model = st.text_input(
-                        "Model / 模型",
-                        value=bp["default_model"],
-                        key=f"api_model_{backend_key}",
-                        placeholder=f"e.g. {model_hint}" if model_hint else "model-name",
-                    )
-                    _help(
-                        "手动输入模型名称，如 deepseek-chat、gpt-4o 等",
-                        "Type any model name, e.g. deepseek-chat, gpt-4o, etc.",
-                    )
-
-                api_key_val = st.text_input(
-                    "API Key / API 密钥",
-                    value=os.environ.get(env_key, ""),
-                    type="password",
-                    key=f"api_key_{backend_key}",
+            ac1, ac2 = st.columns(2)
+            with ac1:
+                api_url = st.text_input(
+                    "API URL / API 地址",
+                    value=bp["base_url"],
+                    key=f"api_url_{backend_key}",
                 )
                 _help(
-                    "输入你的 API 密钥，使用此后端的所有岛屿共享此密钥",
-                    "API key for this backend. All islands using this backend share it.",
+                    "兼容 OpenAI 格式的 API 地址，已自动填充",
+                    "OpenAI-compatible endpoint, auto-filled",
+                )
+            with ac2:
+                # Text input — user can type any model name
+                model_hint = ", ".join(bp["models"]) if bp["models"] else ""
+                api_model = st.text_input(
+                    "Model / 模型",
+                    value=bp["default_model"],
+                    key=f"api_model_{backend_key}",
+                    placeholder=f"e.g. {model_hint}" if model_hint else "model-name",
+                )
+                _help(
+                    "手动输入模型名称，如 deepseek-chat、gpt-4o 等",
+                    "Type any model name, e.g. deepseek-chat, gpt-4o, etc.",
                 )
 
-                # Store for later use
-                api_values[backend_key] = {
-                    "url": api_url,
-                    "model": api_model,
-                    "key": api_key_val,
-                }
+            api_key_val = st.text_input(
+                "API Key / API 密钥",
+                value=os.environ.get(env_key, ""),
+                type="password",
+                key=f"api_key_{backend_key}",
+            )
+            _help(
+                "输入你的 API 密钥，使用此后端的所有岛屿共享此密钥",
+                "API key for this backend. All islands using this backend share it.",
+            )
 
-                # Set env var
-                if api_key_val:
-                    os.environ[env_key] = api_key_val
+            # Store for later use
+            api_values[backend_key] = {
+                "url": api_url,
+                "model": api_model,
+                "key": api_key_val,
+            }
 
-                # Test Connection / 测试连通性
-                if st.button(
-                    "\U0001f50c Test Connection / 测试连通",
-                    key=f"test_conn_{backend_key}",
-                    use_container_width=True,
-                ):
-                    if not api_key_val:
-                        st.error("Please enter API Key first / 请先输入 API Key")
-                    else:
-                        with st.spinner("Testing... / 测试中..."):
-                            try:
-                                import httpx
-                                test_url = api_url.rstrip("/") + "/chat/completions"
-                                headers = {
-                                    "Authorization": f"Bearer {api_key_val}",
-                                    "Content-Type": "application/json",
-                                }
-                                body = {
-                                    "model": api_model,
-                                    "messages": [{"role": "user", "content": "hi"}],
-                                    "max_tokens": 5,
-                                    "temperature": 0,
-                                }
-                                resp = httpx.post(
-                                    test_url, json=body, headers=headers, timeout=15.0,
+            # Set env var
+            if api_key_val:
+                os.environ[env_key] = api_key_val
+
+            # Test Connection / 测试连通性
+            if st.button(
+                "\U0001f50c Test Connection / 测试连通",
+                key=f"test_conn_{backend_key}",
+                use_container_width=True,
+            ):
+                if not api_key_val:
+                    st.error("Please enter API Key first / 请先输入 API Key")
+                else:
+                    with st.spinner("Testing... / 测试中..."):
+                        try:
+                            import httpx
+                            test_url = api_url.rstrip("/") + "/chat/completions"
+                            headers = {
+                                "Authorization": f"Bearer {api_key_val}",
+                                "Content-Type": "application/json",
+                            }
+                            body = {
+                                "model": api_model,
+                                "messages": [{"role": "user", "content": "hi"}],
+                                "max_tokens": 5,
+                                "temperature": 0,
+                            }
+                            resp = httpx.post(
+                                test_url, json=body, headers=headers, timeout=15.0,
+                            )
+                            if resp.status_code == 200:
+                                st.success(
+                                    f"Connected! Model: {api_model} / "
+                                    f"连通成功！模型: {api_model}"
                                 )
-                                if resp.status_code == 200:
-                                    st.success(
-                                        f"Connected! Model: {api_model} / "
-                                        f"连通成功！模型: {api_model}"
-                                    )
-                                else:
-                                    detail = ""
-                                    try:
-                                        detail = resp.json().get("error", {}).get("message", resp.text[:200])
-                                    except Exception:
-                                        detail = resp.text[:200]
-                                    st.error(
-                                        f"Failed / 连接失败 — HTTP {resp.status_code}: {detail}"
-                                    )
-                            except httpx.ConnectError:
+                            else:
+                                detail = ""
+                                try:
+                                    detail = resp.json().get("error", {}).get("message", resp.text[:200])
+                                except Exception:
+                                    detail = resp.text[:200]
                                 st.error(
-                                    "Cannot reach server / 无法连接服务器。"
-                                    "Check URL and network / 请检查 URL 和网络"
+                                    f"Failed / 连接失败 — HTTP {resp.status_code}: {detail}"
                                 )
-                            except httpx.TimeoutException:
-                                st.error(
-                                    "Timeout / 连接超时。"
-                                    "Server too slow / 服务器响应过慢"
-                                )
-                            except Exception as e:
-                                st.error(f"Error / 错误: {e}")
+                        except httpx.ConnectError:
+                            st.error(
+                                "Cannot reach server / 无法连接服务器。"
+                                "Check URL and network / 请检查 URL 和网络"
+                            )
+                        except httpx.TimeoutException:
+                            st.error(
+                                "Timeout / 连接超时。"
+                                "Server too slow / 服务器响应过慢"
+                            )
+                        except Exception as e:
+                            st.error(f"Error / 错误: {e}")
 
-    # Mock environment info
-    if mock_count > 0:
-        with st.expander("About Mock Environment / 关于 Mock 环境", expanded=False):
-            st.markdown("""
+# Mock environment info
+if mock_count > 0:
+    with st.expander("About Mock Environment / 关于 Mock 环境", expanded=False):
+        st.markdown("""
 **Mock Environment / Mock 环境**
 
 A self-contained mathematical environment using cellular automata (Rule110 / Rule30 / Rule90).
@@ -1342,284 +1424,295 @@ No external API calls — completely free to run.
 # ================================================================
 # TAB 2: Run / 启动
 # ================================================================
-with tab_run:
-    st.subheader("Launch Experiment / 启动实验")
 
-    # ── Preset Selector / 预设选择 ──
-    run_presets = {
-        "custom": {"label": "Custom / 自定义"},
-        "quick": {"label": "Quick / 快速 (~2min)", "agents": 10, "gens": 3, "ticks": 30, "top_frac": 0.3, "mut": 0.2},
-        "standard": {"label": "Standard / 标准 (~10min)", "agents": 20, "gens": 10, "ticks": 100, "top_frac": 0.25, "mut": 0.15},
-        "deep": {"label": "Deep / 深度 (~30min)", "agents": 50, "gens": 30, "ticks": 200, "top_frac": 0.2, "mut": 0.15},
-        "marathon": {"label": "Marathon / 马拉松 (~2h)", "agents": 100, "gens": 100, "ticks": 200, "top_frac": 0.15, "mut": 0.12},
-    }
-    run_preset_key = st.selectbox(
-        "Preset / 预设",
-        options=list(run_presets.keys()),
-        format_func=lambda k: run_presets[k]["label"],
+st.markdown("""<hr class="gv2-section-divider">""", unsafe_allow_html=True)
+
+# ================================================================
+# Section: Experiment / 实验
+# ================================================================
+st.markdown("""<div id="gv2-sec-launch" class="gv2-section gv2-section-enter">
+  <div class="gv2-section-title">Experiment / 实验</div>
+  <div class="gv2-section-subtitle">Configure and launch evolution experiments with seed management.</div>
+</div>""", unsafe_allow_html=True)
+
+st.subheader("Launch Experiment / 启动实验")
+
+# ── Preset Selector / 预设选择 ──
+run_presets = {
+    "custom": {"label": "Custom / 自定义"},
+    "quick": {"label": "Quick / 快速 (~2min)", "agents": 10, "gens": 3, "ticks": 30, "top_frac": 0.3, "mut": 0.2},
+    "standard": {"label": "Standard / 标准 (~10min)", "agents": 20, "gens": 10, "ticks": 100, "top_frac": 0.25, "mut": 0.15},
+    "deep": {"label": "Deep / 深度 (~30min)", "agents": 50, "gens": 30, "ticks": 200, "top_frac": 0.2, "mut": 0.15},
+    "marathon": {"label": "Marathon / 马拉松 (~2h)", "agents": 100, "gens": 100, "ticks": 200, "top_frac": 0.15, "mut": 0.12},
+}
+run_preset_key = st.selectbox(
+    "Preset / 预设",
+    options=list(run_presets.keys()),
+    format_func=lambda k: run_presets[k]["label"],
+)
+rp = run_presets[run_preset_key]
+
+c1, c2, c3, c4, c5 = st.columns(5)
+with c1:
+    n_agents = st.number_input(
+        "Agents / 代理数",
+        value=rp.get("agents", 20), min_value=2, max_value=1000, step=5,
     )
-    rp = run_presets[run_preset_key]
-
-    c1, c2, c3, c4, c5 = st.columns(5)
-    with c1:
-        n_agents = st.number_input(
-            "Agents / 代理数",
-            value=rp.get("agents", 20), min_value=2, max_value=1000, step=5,
-        )
-    with c2:
-        total_gens = st.number_input(
-            "Generations / 代数",
-            value=rp.get("gens", 10), min_value=1, max_value=10000, step=5,
-        )
-    with c3:
-        ticks_per = st.number_input(
-            "Ticks / Gen",
-            value=rp.get("ticks", 100), min_value=10, max_value=10000, step=50,
-        )
-    with c4:
-        top_frac = st.slider(
-            "Elite % / 精英比例",
-            0.05, 0.5, rp.get("top_frac", 0.25), 0.05,
-        )
-    with c5:
-        mut_rate = st.slider(
-            "Mut Rate / 变异率",
-            0.01, 1.0, rp.get("mut", 0.15), 0.05,
-        )
-
-    seed = st.number_input("Random Seed / 随机种子", value=42, min_value=0)
-
-    st.divider()
-
-    # ── Elite Seed Bank / 精英种子库 ──
-    n_surv = _count_survivors()
-    best_fit = _top_survivor_fitness()
-
-    c1, c2, c3 = st.columns(3)
-    c1.metric("Seeds / 种子数", n_surv)
-    c2.metric("Best Fitness / 最高适应度", f"{best_fit:.1f}" if best_fit else "N/A")
-    c3.metric("Est. Time / 预估时间", f"~{max(1, n_agents * total_gens * ticks_per // 50000)}min")
-
-    # Auto-determine seed count: ~10-30% of population, min 3, max 30
-    auto_seed_n = max(3, min(30, n_agents // 3))
-
-    seed_mode = st.radio(
-        "Seed Mode / 种子模式",
-        ["Auto / 自动加载最优", "Manual / 手动选择", "None / 无种子"],
-        horizontal=True,
-        label_visibility="collapsed",
+with c2:
+    total_gens = st.number_input(
+        "Generations / 代数",
+        value=rp.get("gens", 10), min_value=1, max_value=10000, step=5,
+    )
+with c3:
+    ticks_per = st.number_input(
+        "Ticks / Gen",
+        value=rp.get("ticks", 100), min_value=10, max_value=10000, step=50,
+    )
+with c4:
+    top_frac = st.slider(
+        "Elite % / 精英比例",
+        0.05, 0.5, rp.get("top_frac", 0.25), 0.05,
+    )
+with c5:
+    mut_rate = st.slider(
+        "Mut Rate / 变异率",
+        0.01, 1.0, rp.get("mut", 0.15), 0.05,
     )
 
-    selected_seed_paths: list[str] = []
+seed = st.number_input("Random Seed / 随机种子", value=42, min_value=0)
 
-    if seed_mode == "Manual / 手动选择":
-        seed_groups = _group_survivors_by_date()
+st.divider()
 
-        if not seed_groups:
-            st.info("No survivors yet. Run an experiment first. / 暂无种子，请先跑实验。")
-        else:
-            st.markdown(
-                f"**Select seeds / 选择种子** — "
-                f"click a date on the left, pick agents on the right / "
-                f"左侧点选日期，右侧选择个体"
-            )
+st.markdown('<div id="gv2-sec-seeds" style="scroll-margin-top:24px;"></div>', unsafe_allow_html=True)
+# ── Elite Seed Bank / 精英种子库 ──
+n_surv = _count_survivors()
+best_fit = _top_survivor_fitness()
 
-            col_left, col_right = st.columns([1, 2])
+c1, c2, c3 = st.columns(3)
+c1.metric("Seeds / 种子数", n_surv)
+c2.metric("Best Fitness / 最高适应度", f"{best_fit:.1f}" if best_fit else "N/A")
+c3.metric("Est. Time / 预估时间", f"~{max(1, n_agents * total_gens * ticks_per // 50000)}min")
 
-            with col_left:
-                st.markdown("**实验日期 / Runs**")
-                for i, grp in enumerate(seed_groups):
-                    btn_label = (
-                        f"📅 {grp['date']} {grp['time_range']}  "
-                        f"({grp['count']} agents, "
-                        f"best={grp['best_fitness']:.0f})"
-                    )
-                    if st.button(btn_label, key=f"seed_grp_{i}", use_container_width=True):
-                        st.session_state["seed_selected_group"] = i
+# Auto-determine seed count: ~10-30% of population, min 3, max 30
+auto_seed_n = max(3, min(30, n_agents // 3))
 
-            sel_grp_idx = st.session_state.get("seed_selected_group", 0)
-            sel_grp_idx = min(sel_grp_idx, len(seed_groups) - 1)
-            selected_group = seed_groups[sel_grp_idx]
+seed_mode = st.radio(
+    "Seed Mode / 种子模式",
+    ["Auto / 自动加载最优", "Manual / 手动选择", "None / 无种子"],
+    horizontal=True,
+    label_visibility="collapsed",
+)
 
-            with col_right:
-                st.markdown(
-                    f"**{selected_group['date']}** — "
-                    f"{selected_group['count']} agents, "
-                    f"best fitness = **{selected_group['best_fitness']:.1f}**"
+selected_seed_paths: list[str] = []
+
+if seed_mode == "Manual / 手动选择":
+    seed_groups = _group_survivors_by_date()
+
+    if not seed_groups:
+        st.info("No survivors yet. Run an experiment first. / 暂无种子，请先跑实验。")
+    else:
+        st.markdown(
+            f"**Select seeds / 选择种子** — "
+            f"click a date on the left, pick agents on the right / "
+            f"左侧点选日期，右侧选择个体"
+        )
+
+        col_left, col_right = st.columns([1, 2])
+
+        with col_left:
+            st.markdown("**实验日期 / Runs**")
+            for i, grp in enumerate(seed_groups):
+                btn_label = (
+                    f"📅 {grp['date']} {grp['time_range']}  "
+                    f"({grp['count']} agents, "
+                    f"best={grp['best_fitness']:.0f})"
                 )
+                if st.button(btn_label, key=f"seed_grp_{i}", use_container_width=True):
+                    st.session_state["seed_selected_group"] = i
 
-                # Quick-select buttons row
-                qc1, qc2, qc3 = st.columns(3)
-                with qc1:
-                    if st.button(
-                        f"🏆 Select Top {auto_seed_n} / 选最优 {auto_seed_n} 个",
-                        key="btn_top_n", use_container_width=True,
-                    ):
-                        top_agents = selected_group["agents"][:auto_seed_n]
-                        st.session_state["seed_manual_picks"] = [a["path"] for a in top_agents]
-                with qc2:
-                    if st.button(
-                        f"🧬 Breed {auto_seed_n} New Seeds / 繁殖 {auto_seed_n} 个新种子",
-                        key="btn_breed", use_container_width=True,
-                    ):
-                        top_for_breed = selected_group["agents"][:min(10, len(selected_group["agents"]))]
-                        breed_paths = [a["path"] for a in top_for_breed]
-                        with st.spinner("Breeding... / 繁殖中..."):
-                            new_paths = _breed_top_survivors(
-                                breed_paths, n_children=auto_seed_n,
-                                mutation_rate=mut_rate,
-                            )
-                        if new_paths:
-                            st.session_state["seed_manual_picks"] = new_paths
-                            st.success(
-                                f"Bred {len(new_paths)} new seeds / "
-                                f"成功繁殖 {len(new_paths)} 个新种子"
-                            )
-                        else:
-                            st.warning("Need ≥2 seeds to breed / 至少需要 2 个种子才能繁殖")
-                with qc3:
-                    if st.button("Clear / 清空选择", key="btn_clear_picks", use_container_width=True):
-                        st.session_state["seed_manual_picks"] = []
+        sel_grp_idx = st.session_state.get("seed_selected_group", 0)
+        sel_grp_idx = min(sel_grp_idx, len(seed_groups) - 1)
+        selected_group = seed_groups[sel_grp_idx]
 
-                # Agent table with checkboxes
-                st.markdown("---")
-                current_picks = set(st.session_state.get("seed_manual_picks", []))
+        with col_right:
+            st.markdown(
+                f"**{selected_group['date']}** — "
+                f"{selected_group['count']} agents, "
+                f"best fitness = **{selected_group['best_fitness']:.1f}**"
+            )
 
-                for j, ag in enumerate(selected_group["agents"][:50]):
-                    c1, c2, c3, c4 = st.columns([3, 2, 2, 2])
-                    with c1:
-                        checked = st.checkbox(
-                            ag["id"],
-                            value=ag["path"] in current_picks,
-                            key=f"seed_chk_{i}_{j}",
+            # Quick-select buttons row
+            qc1, qc2, qc3 = st.columns(3)
+            with qc1:
+                if st.button(
+                    f"🏆 Select Top {auto_seed_n} / 选最优 {auto_seed_n} 个",
+                    key="btn_top_n", use_container_width=True,
+                ):
+                    top_agents = selected_group["agents"][:auto_seed_n]
+                    st.session_state["seed_manual_picks"] = [a["path"] for a in top_agents]
+            with qc2:
+                if st.button(
+                    f"🧬 Breed {auto_seed_n} New Seeds / 繁殖 {auto_seed_n} 个新种子",
+                    key="btn_breed", use_container_width=True,
+                ):
+                    top_for_breed = selected_group["agents"][:min(10, len(selected_group["agents"]))]
+                    breed_paths = [a["path"] for a in top_for_breed]
+                    with st.spinner("Breeding... / 繁殖中..."):
+                        new_paths = _breed_top_survivors(
+                            breed_paths, n_children=auto_seed_n,
+                            mutation_rate=mut_rate,
                         )
-                    with c2:
-                        st.caption(f"fitness: {ag['fitness']:.1f}")
-                    with c3:
-                        st.caption(f"gen: {ag['gen']}")
-                    with c4:
-                        mtime = datetime.fromtimestamp(Path(ag["path"]).stat().st_mtime)
-                        st.caption(mtime.strftime("%H:%M"))
-
-                    if checked:
-                        current_picks.add(ag["path"])
+                    if new_paths:
+                        st.session_state["seed_manual_picks"] = new_paths
+                        st.success(
+                            f"Bred {len(new_paths)} new seeds / "
+                            f"成功繁殖 {len(new_paths)} 个新种子"
+                        )
                     else:
-                        current_picks.discard(ag["path"])
+                        st.warning("Need ≥2 seeds to breed / 至少需要 2 个种子才能繁殖")
+            with qc3:
+                if st.button("Clear / 清空选择", key="btn_clear_picks", use_container_width=True):
+                    st.session_state["seed_manual_picks"] = []
 
-                st.session_state["seed_manual_picks"] = list(current_picks)
+            # Agent table with checkboxes
+            st.markdown("---")
+            current_picks = set(st.session_state.get("seed_manual_picks", []))
 
-            selected_seed_paths = st.session_state.get("seed_manual_picks", [])
+            for j, ag in enumerate(selected_group["agents"][:50]):
+                c1, c2, c3, c4 = st.columns([3, 2, 2, 2])
+                with c1:
+                    checked = st.checkbox(
+                        ag["id"],
+                        value=ag["path"] in current_picks,
+                        key=f"seed_chk_{i}_{j}",
+                    )
+                with c2:
+                    st.caption(f"fitness: {ag['fitness']:.1f}")
+                with c3:
+                    st.caption(f"gen: {ag['gen']}")
+                with c4:
+                    mtime = datetime.fromtimestamp(Path(ag["path"]).stat().st_mtime)
+                    st.caption(mtime.strftime("%H:%M"))
 
-    elif seed_mode == "Auto / 自动加载最优":
-        survivors = _list_survivors(auto_seed_n)
-        if survivors:
-            selected_seed_paths = [s["path"] for s in survivors]
-            st.caption(
-                f"Will load {len(survivors)} top seeds / "
-                f"将加载 {len(survivors)} 个最优种子 "
-                f"(≈10-30% of population / 约为种群的 10-30%)"
-            )
+                if checked:
+                    current_picks.add(ag["path"])
+                else:
+                    current_picks.discard(ag["path"])
 
-    st.divider()
+            st.session_state["seed_manual_picks"] = list(current_picks)
 
-    # ── Launch / 启动 ──
-    c1, c2 = st.columns(2)
-    with c1:
-        if st.button("Start / 开始实验", type="primary", use_container_width=True):
-            # Backend connectivity check for non-mock islands
-            _load_api_keys_to_env()
-            needs_backend = any(b != "mock" for b in island_backends)
-            if needs_backend:
-                ok, msg = _check_backend_connectivity(island_backends)
-                if not ok:
-                    st.session_state["show_backend_modal"] = True
-                    st.session_state["backend_err_msg"] = msg
-                    st.rerun()
+        selected_seed_paths = st.session_state.get("seed_manual_picks", [])
 
-            # Write initial status so Monitor shows data immediately
-            DATA_DIR.mkdir(parents=True, exist_ok=True)
-            STATUS_FILE.write_text(json.dumps({
-                "running": True,
-                "mode": "starting",
-                "generation": 0,
-                "total_generations": total_gens,
-                "tick": 0,
-                "alive_count": 0,
-                "total_agents": n_agents * 4,
-                "islands": [],
-                "history": [],
-                "note": "Initializing... / 初始化中...",
-            }, indent=2), "utf-8")
+elif seed_mode == "Auto / 自动加载最优":
+    survivors = _list_survivors(auto_seed_n)
+    if survivors:
+        selected_seed_paths = [s["path"] for s in survivors]
+        st.caption(
+            f"Will load {len(survivors)} top seeds / "
+            f"将加载 {len(survivors)} 个最优种子 "
+            f"(≈10-30% of population / 约为种群的 10-30%)"
+        )
 
-            seeds_arg = None
-            if selected_seed_paths:
-                SEEDS_FILE.write_text(json.dumps(selected_seed_paths, indent=2), "utf-8")
-                seeds_arg = str(SEEDS_FILE)
+st.divider()
 
-            cmd = [
-                sys.executable, "-m", "genesis_v2", "experiment",
-                "--agents", str(n_agents),
-                "--generations", str(total_gens),
-                "--ticks", str(ticks_per),
-                "--top-fraction", str(top_frac),
-                "--mutation-rate", str(mut_rate),
-                "--seed", str(seed),
-            ]
-            if seeds_arg:
-                cmd.extend(["--seeds-file", seeds_arg])
-
-            log_file = DATA_DIR / "experiment.log"
-            log_fh = open(log_file, "w", encoding="utf-8")
-            proc = subprocess.Popen(
-                cmd, cwd=str(PROJECT_ROOT),
-                stdout=log_fh, stderr=subprocess.STDOUT, text=True,
-            )
-            st.session_state["exp_log_fh"] = log_fh
-            st.session_state["exp_pid"] = proc.pid
-            st.session_state["exp_log_file"] = str(log_file)
-            st.success(f"Started! PID: {proc.pid} / 已启动！")
-            st.caption(f"Log: `{log_file}`")
-
-    with c2:
-        if st.button("Stop / 停止", type="secondary", use_container_width=True):
-            pid = _get_running_pid()
-            if pid:
-                try:
-                    os.kill(pid, 9)
-                    st.warning(f"Killed PID {pid}")
-                except (OSError, ProcessLookupError):
-                    st.info("Already finished / 已结束")
-                status = _load_status()
-                if status:
-                    status["running"] = False
-                    status["note"] = "Stopped by user"
-                    STATUS_FILE.write_text(json.dumps(status, indent=2), "utf-8")
-                st.session_state.pop("exp_pid", None)
+# ── Launch / 启动 ──
+c1, c2 = st.columns(2)
+with c1:
+    if st.button("Start / 开始实验", type="primary", use_container_width=True):
+        _load_api_keys_to_env()
+        needs_backend = any(b != "mock" for b in island_backends)
+        if needs_backend:
+            ok, msg = _check_backend_connectivity(island_backends)
+            if not ok:
+                st.session_state["backend_err_msg"] = msg
+                st.rerun()
             else:
-                st.info("No experiment running / 无运行中的实验")
+                st.session_state["ready_to_launch"] = True
+        else:
+            st.session_state["ready_to_launch"] = True
 
-    # ── Backend Not Started Modal / 后端未启动弹窗 ──
-    if st.session_state.get("show_backend_modal"):
-        err_msg = st.session_state.get("backend_err_msg", "Backend unreachable")
-        st.markdown(f"""
-<div class="gv2-modal-overlay">
-  <div class="gv2-modal-card">
-    <div class="gv2-modal-icon">!</div>
-    <h3>Backend 未启动</h3>
-    <p>LLM backend is not running ({err_msg}).<br>
-    Please start the backend first, or switch all islands to Mock mode.<br>
-    <span style="font-size:13px;color:var(--ink-muted)">LLM 后端未运行，请先启动后端或将所有岛屿切换为 Mock 模式。</span></p>
-    <a href="https://github.com/TimeCraker/genesis-v2" target="_blank" rel="noopener" class="gv2-modal-gh-btn">
-      {_GITHUB_SVG}
-      <span>Explore on GitHub / 探索项目</span>
-    </a>
-  </div>
-</div>
-""", unsafe_allow_html=True)
-        if st.button("Close / 关闭", key="close_backend_modal", use_container_width=True):
-            st.session_state.pop("show_backend_modal", None)
-            st.session_state.pop("backend_err_msg", None)
-            st.rerun()
+# Handle "Switch to Mock" from dialog
+if st.session_state.get("switch_to_mock"):
+    st.session_state.pop("switch_to_mock", None)
+    for ic in island_configs:
+        if ic.get("backend", "mock") != "mock":
+            ic["backend"] = "mock"
+    cfg_load = _load_yaml()
+    if "population" in cfg_load:
+        cfg_load["population"]["islands"] = island_configs
+        _save_yaml(cfg_load)
+    st.session_state["ready_to_launch"] = True
+
+# Open backend dialog if needed
+if st.session_state.get("backend_err_msg"):
+    _backend_dialog()
+
+# Launch experiment if ready
+if st.session_state.get("ready_to_launch"):
+    st.session_state.pop("ready_to_launch", None)
+
+    # Write initial status so Monitor shows data immediately
+    DATA_DIR.mkdir(parents=True, exist_ok=True)
+    STATUS_FILE.write_text(json.dumps({
+        "running": True,
+        "mode": "starting",
+        "generation": 0,
+        "total_generations": total_gens,
+        "tick": 0,
+        "alive_count": 0,
+        "total_agents": n_agents * 4,
+        "islands": [],
+        "history": [],
+        "note": "Initializing... / 初始化中...",
+    }, indent=2), "utf-8")
+
+    seeds_arg = None
+    if selected_seed_paths:
+        SEEDS_FILE.write_text(json.dumps(selected_seed_paths, indent=2), "utf-8")
+        seeds_arg = str(SEEDS_FILE)
+
+    cmd = [
+        sys.executable, "-m", "genesis_v2", "experiment",
+        "--agents", str(n_agents),
+        "--generations", str(total_gens),
+        "--ticks", str(ticks_per),
+        "--top-fraction", str(top_frac),
+        "--mutation-rate", str(mut_rate),
+        "--seed", str(seed),
+    ]
+    if seeds_arg:
+        cmd.extend(["--seeds-file", seeds_arg])
+
+    log_file = DATA_DIR / "experiment.log"
+    log_fh = open(log_file, "w", encoding="utf-8")
+    proc = subprocess.Popen(
+        cmd, cwd=str(PROJECT_ROOT),
+        stdout=log_fh, stderr=subprocess.STDOUT, text=True,
+    )
+    st.session_state["exp_log_fh"] = log_fh
+    st.session_state["exp_pid"] = proc.pid
+    st.session_state["exp_log_file"] = str(log_file)
+    st.success(f"Started! PID: {proc.pid} / 已启动！")
+    st.caption(f"Log: `{log_file}`")
+
+with c2:
+    if st.button("Stop / 停止", type="secondary", use_container_width=True):
+        pid = _get_running_pid()
+        if pid:
+            try:
+                os.kill(pid, 9)
+                st.warning(f"Killed PID {pid}")
+            except (OSError, ProcessLookupError):
+                st.info("Already finished / 已结束")
+            status = _load_status()
+            if status:
+                status["running"] = False
+                status["note"] = "Stopped by user"
+                STATUS_FILE.write_text(json.dumps(status, indent=2), "utf-8")
+            st.session_state.pop("exp_pid", None)
+        else:
+            st.info("No experiment running / 无运行中的实验")
+
 
 
 # ================================================================
@@ -1686,6 +1779,7 @@ def monitor_panel():
             return "off"
         return "normal" if positive_is_good else "inverse"
 
+    st.markdown('<div id="gv2-sec-status" style="scroll-margin-top:24px;"></div>', unsafe_allow_html=True)
     # ── Status Bar / 状态栏 ──
     if running:
         gen = status.get("generation", 0)
@@ -1763,6 +1857,7 @@ def monitor_panel():
 | **箭头颜色** | 绿色 = 正向变化 | 红色 = 负向变化 | 与上一代的差值 / Delta from previous generation |
         """)
 
+    st.markdown('<div id="gv2-sec-logs" style="scroll-margin-top:24px;"></div>', unsafe_allow_html=True)
     # ── Experiment Log / 实验日志 ──
     log_path = Path(DATA_DIR / "experiment.log")
     if log_path.exists():
@@ -1777,6 +1872,7 @@ def monitor_panel():
 
     st.divider()
 
+    st.markdown('<div id="gv2-sec-charts" style="scroll-margin-top:24px;"></div>', unsafe_allow_html=True)
     # ── Charts / 图表 ──
     if history:
         df = pd.DataFrame(history)
@@ -1931,5 +2027,15 @@ def monitor_panel():
                     st.warning(f"Cannot load config / 无法加载配置: {e}")
 
 
-with tab_mon:
-    monitor_panel()
+
+st.markdown("""<hr class="gv2-section-divider">""", unsafe_allow_html=True)
+
+# ================================================================
+# Section: Monitor / 监控
+# ================================================================
+st.markdown("""<div id="gv2-sec-status" class="gv2-section gv2-section-enter">
+  <div class="gv2-section-title">Monitor / 监控</div>
+  <div class="gv2-section-subtitle">Real-time experiment status, charts, and logs.</div>
+</div>""", unsafe_allow_html=True)
+
+monitor_panel()
