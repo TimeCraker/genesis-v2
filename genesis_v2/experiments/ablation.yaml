@@ -1,0 +1,75 @@
+# Ablation experiment presets for Genesis v2
+# Usage: python -m genesis_v2 mve-run --config experiments/ablation.yaml --preset A
+
+presets:
+  A:
+    name: Baseline
+    description: Full v2 architecture (all features enabled)
+    # Uses default genesis_v2.yaml — no overrides
+
+  B:
+    name: NoSocial
+    description: Remove social layer (no communication, no cooperation rewards)
+    physics:
+      w_social: 0.0
+      zeta: 0.0
+    environment:
+      comm_radius: 0
+
+  C:
+    name: NoCrossover
+    description: Remove crossover (sexual reproduction), clone-only evolution
+    evolution:
+      crossover_ratio: 0.0
+      clone_ratio: 0.8
+      migration_ratio: 0.2
+
+  D:
+    name: NoExploration
+    description: Remove exploration bonus
+    physics:
+      w_explore: 0.0
+
+  E:
+    name: NoSelfModification
+    description: Disable self-modification channel
+    physics:
+      selfmod_energy_threshold: 999999.0  # Effectively disabled
+
+  F:
+    name: SingleLLM
+    description: All islands use the same LLM backend (no multi-LLM pressure)
+    population:
+      islands:
+        - name: AllDeepSeek
+          size: 400
+          mutation_rate: 0.15
+          backend: deepseek
+
+  G:
+    name: TinyPop
+    description: Minimal population (10 per island)
+    population:
+      islands:
+        - name: Explorer
+          size: 10
+          mutation_rate: 0.30
+          backend: deepseek
+        - name: Exploiter
+          size: 10
+          mutation_rate: 0.05
+          backend: gemini
+        - name: RecurrentOnly
+          size: 10
+          mutation_rate: 0.15
+          backend: mimo
+        - name: ShortcutOnly
+          size: 10
+          mutation_rate: 0.15
+          backend: mock
+
+  H:
+    name: ScalarNodes
+    description: Use scalar nodes (D_node=1) — like v1, for comparison
+    genome:
+      node_dim: 1

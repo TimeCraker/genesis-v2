@@ -1,0 +1,29 @@
+backends:
+  deepseek:
+    api_key_env: GENESIS_DEEPSEEK_KEY
+    base_url: https://api.deepseek.com/v1
+    cost_per_1m_tokens: 0.0
+    max_tokens: 64
+    model: deepseek-v4-pro
+    timeout_sec: 30.0
+  gemini:
+    api_key_env: GENESIS_GEMINI_KEY
+    base_url: https://generativelanguage.googleapis.com/v1beta/openai
+    cost_per_1m_tokens: 0.0
+    max_tokens: 64
+    model: gemini-2.0-flash
+    timeout_sec: 30.0
+  mimo:
+    api_key_env: GENESIS_MIMO_KEY
+    base_url: https://api.xiaomi.com/v1
+    cost_per_1m_tokens: 0.0
+    max_tokens: 64
+    model: MiMo-7B
+    timeout_sec: 30.0
+  openai:
+    api_key_env: GENESIS_OPENAI_KEY
+    base_url: https://api.openai.com/v1
+    cost_per_1m_tokens: 0.0
+    max_tokens: 64
+    model: gpt-4o-mini
+    timeout_sec: 30.0
