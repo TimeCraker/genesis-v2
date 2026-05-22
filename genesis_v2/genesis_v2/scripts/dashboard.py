@@ -4,7 +4,9 @@ Genesis v2 控制台 — AGI 演化实验的中英对照控制面板。"""
 from __future__ import annotations
 
 import json
+import math
 import os
+import random
 import re
 import subprocess
 import sys
@@ -135,92 +137,287 @@ st.set_page_config(
 
 st.markdown("""
 <style>
-/* === Polish only — colors come from .streamlit/config.toml === */
+/* ═══════════════════════════════════════════════════════════════
+   Genesis v2 — Apple-Style Design System + Motion Animations
+   ═══════════════════════════════════════════════════════════════ */
 
-/* Shape: rounded inputs */
+/* ── Design Tokens ── */
+:root {
+  --canvas: #ffffff;
+  --surface: #f5f5f7;
+  --ink: #1d1d1f;
+  --ink-secondary: #6e6e73;
+  --ink-muted: #86868b;
+  --border: #d2d2d7;
+  --divider: #e8e8ed;
+  --accent: #0066cc;
+  --accent-hover: #0077ed;
+  --success: #34c759;
+  --error: #ff3b30;
+  --warning: #ff9500;
+  --radius-card: 12px;
+  --radius-pill: 9999px;
+  --radius-btn: 8px;
+  --shadow-card: 0 1px 3px rgba(0,0,0,0.06), 0 1px 2px rgba(0,0,0,0.04);
+  --shadow-hover: 0 4px 12px rgba(0,0,0,0.08);
+  --shadow-elevated: 0 2px 2px rgba(0,0,0,0.1), 0 8px 16px -4px rgba(0,0,0,0.1);
+  --font-body: 'Inter', -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI', sans-serif;
+  --font-mono: 'JetBrains Mono', 'SF Mono', 'Fira Code', monospace;
+}
+
+/* ── Global Typography ── */
+html, body, [class*="css"] { font-family: var(--font-body) !important; color: var(--ink); }
+h1, h2, h3, h4, h5, h6 { font-family: var(--font-body) !important; font-weight: 600 !important; letter-spacing: -0.025em !important; color: var(--ink) !important; }
+
+/* ── Page Background & Navbar Spacing ── */
+div[data-testid="stAppViewContainer"] { background: var(--canvas) !important; }
+section[data-testid="stMain"] { padding-top: 64px !important; }
+
+/* ── Navbar ── */
+.gv2-navbar {
+  position: fixed; top: 0; left: 0; right: 0; z-index: 9999;
+  height: 56px;
+  background: rgba(255,255,255,0.72);
+  backdrop-filter: saturate(180%) blur(20px);
+  -webkit-backdrop-filter: saturate(180%) blur(20px);
+  border-bottom: 1px solid var(--divider);
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 0 32px;
+  font-family: var(--font-body);
+}
+.gv2-logo { font-weight: 600; font-size: 17px; letter-spacing: -0.02em; color: var(--ink); }
+.gv2-nav-right { display: flex; align-items: center; gap: 12px; }
+.gv2-gh-btn {
+  display: inline-flex; align-items: center; gap: 6px;
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: var(--radius-pill); padding: 6px 14px;
+  font-size: 13px; font-weight: 500; color: var(--ink);
+  text-decoration: none; transition: all 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
+  cursor: pointer;
+}
+.gv2-gh-btn:hover { transform: translateY(-1px); box-shadow: var(--shadow-hover); background: #fff; }
+.gv2-gh-btn svg { flex-shrink: 0; }
+.gv2-contact-btn {
+  color: var(--ink-secondary); font-size: 13px; font-weight: 500;
+  text-decoration: none; padding: 6px 10px;
+  transition: color 0.2s ease;
+}
+.gv2-contact-btn:hover { color: var(--accent); }
+
+/* ── Modal ── */
+.gv2-modal-overlay {
+  position: fixed; inset: 0; z-index: 10001;
+  background: rgba(0,0,0,0.25);
+  display: flex; align-items: center; justify-content: center;
+  backdrop-filter: blur(4px); -webkit-backdrop-filter: blur(4px);
+}
+.gv2-modal-card {
+  background: white; border-radius: 20px; padding: 40px 48px;
+  max-width: 420px; width: 90%; text-align: center;
+  box-shadow: 0 20px 60px rgba(0,0,0,0.15);
+  animation: modalIn 0.4s cubic-bezier(0.22, 1, 0.36, 1);
+}
+.gv2-modal-icon {
+  width: 56px; height: 56px; border-radius: 50%;
+  background: var(--surface); display: flex; align-items: center;
+  justify-content: center; margin: 0 auto 20px; font-size: 24px;
+  color: var(--warning);
+}
+.gv2-modal-card h3 { margin: 0 0 8px; font-size: 20px; font-weight: 600; letter-spacing: -0.02em; }
+.gv2-modal-card p { margin: 0 0 24px; font-size: 15px; color: var(--ink-secondary); line-height: 1.5; }
+.gv2-modal-gh-btn {
+  display: inline-flex; align-items: center; gap: 8px;
+  background: var(--ink); color: white; border: none;
+  border-radius: var(--radius-pill); padding: 12px 24px;
+  font-size: 15px; font-weight: 500; text-decoration: none;
+  transition: all 0.25s cubic-bezier(0.34, 1.56, 0.64, 1); cursor: pointer;
+}
+.gv2-modal-gh-btn:hover { transform: scale(1.03); box-shadow: var(--shadow-elevated); }
+.gv2-modal-gh-btn svg { flex-shrink: 0; }
+
+/* ── Animations (Motion library CSS equivalents) ── */
+@keyframes fadeSlideUp {
+  from { opacity: 0; transform: translateY(20px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+@keyframes modalIn {
+  from { opacity: 0; transform: scale(0.92) translateY(16px); }
+  to { opacity: 1; transform: scale(1) translateY(0); }
+}
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.4; }
+}
+@keyframes shimmer {
+  0% { background-position: -200% center; }
+  100% { background-position: 200% center; }
+}
+
+/* Page title animation */
+.anim-title { animation: fadeSlideUp 0.7s cubic-bezier(0.22, 1, 0.36, 1) both; }
+
+/* Metric cards: stagger animation */
+div[data-testid="stMetric"] {
+  animation: fadeSlideUp 0.5s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+div[data-testid="stHorizontalBlock"] > div:nth-child(1) div[data-testid="stMetric"] { animation-delay: 0ms; }
+div[data-testid="stHorizontalBlock"] > div:nth-child(2) div[data-testid="stMetric"] { animation-delay: 80ms; }
+div[data-testid="stHorizontalBlock"] > div:nth-child(3) div[data-testid="stMetric"] { animation-delay: 160ms; }
+div[data-testid="stHorizontalBlock"] > div:nth-child(4) div[data-testid="stMetric"] { animation-delay: 240ms; }
+div[data-testid="stHorizontalBlock"] > div:nth-child(5) div[data-testid="stMetric"] { animation-delay: 320ms; }
+
+/* Tab content entrance */
+.stTabs [data-baseweb="tab-panel"] {
+  animation: fadeSlideUp 0.35s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+/* Live status pulse dot */
+.gv2-live-dot {
+  display: inline-block; width: 8px; height: 8px;
+  border-radius: 50%; background: var(--success);
+  animation: pulse 2s ease-in-out infinite;
+  margin-right: 6px; vertical-align: middle;
+}
+.gv2-dot-static {
+  display: inline-block; width: 8px; height: 8px;
+  border-radius: 50%; background: var(--ink-muted);
+  margin-right: 6px; vertical-align: middle;
+}
+
+/* Progress bar shimmer */
+div[data-testid="stProgressBar"] > div {
+  background: linear-gradient(90deg, var(--accent) 0%, #4da3ff 50%, var(--accent) 100%) !important;
+  background-size: 200% 100% !important;
+  animation: shimmer 2s linear infinite !important;
+  border-radius: var(--radius-pill) !important;
+}
+
+/* ── Component Overrides ── */
+
+/* Inputs */
 .stTextInput > div > div > input,
 .stNumberInput > div > div > input,
 .stTextArea > div > div > textarea {
-    border-radius: 8px !important;
+  border-radius: var(--radius-btn) !important;
+  border-color: var(--border) !important;
+  font-family: var(--font-body) !important;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease !important;
 }
-div[data-baseweb="select"] > div {
-    border-radius: 8px !important;
+.stTextInput > div > div > input:focus,
+.stNumberInput > div > div > input:focus {
+  border-color: var(--accent) !important;
+  box-shadow: 0 0 0 3px rgba(0,102,204,0.12) !important;
 }
+div[data-baseweb="select"] > div { border-radius: var(--radius-btn) !important; }
 
-/* Shape: rounded tabs */
+/* Tabs */
 .stTabs [data-baseweb="tab-list"] {
-    gap: 0;
-    border-radius: 10px;
-    padding: 4px;
+  gap: 0; border-radius: var(--radius-card); padding: 4px;
+  background: var(--surface) !important; border: none !important;
 }
 .stTabs [data-baseweb="tab"] {
-    border-radius: 8px;
-    padding: 8px 20px;
-    font-weight: 500;
+  border-radius: var(--radius-btn); padding: 10px 20px;
+  font-weight: 500 !important; font-size: 14px;
+  color: var(--ink-secondary) !important;
+  border: none !important; background: transparent !important;
+  transition: all 0.2s ease !important;
 }
 .stTabs [aria-selected="true"] {
-    box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+  background: white !important; color: var(--ink) !important;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.08) !important;
 }
 
-/* Shape: rounded buttons */
+/* Buttons — spring feel */
 .stButton > button {
-    border-radius: 8px !important;
-    font-weight: 500 !important;
-    padding: 8px 16px !important;
-    transition: all 0.15s ease !important;
+  border-radius: var(--radius-btn) !important;
+  font-weight: 500 !important; font-size: 14px !important;
+  padding: 8px 20px !important; font-family: var(--font-body) !important;
+  border: 1px solid var(--border) !important;
+  transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1),
+              box-shadow 0.2s ease, background 0.2s ease !important;
+}
+.stButton > button:hover {
+  transform: translateY(-1px) !important;
+  box-shadow: var(--shadow-hover) !important;
+}
+.stButton > button:active { transform: scale(0.97) !important; }
+/* Primary button — pill shape */
+.stButton > button[data-testid="stBaseButton-primary"],
+.stButton > button[kind="primary"] {
+  background: var(--accent) !important; color: white !important;
+  border: none !important; border-radius: var(--radius-pill) !important;
+  padding: 10px 28px !important;
+}
+.stButton > button[data-testid="stBaseButton-primary"]:hover,
+.stButton > button[kind="primary"]:hover {
+  background: var(--accent-hover) !important;
 }
 
-/* Shape: rounded cards */
+/* Metric cards */
 div[data-testid="stMetric"] {
-    border-radius: 10px;
-    padding: 12px 16px;
+  background: white; border: 1px solid var(--divider);
+  border-radius: var(--radius-card) !important;
+  padding: 16px 20px !important;
+  box-shadow: var(--shadow-card);
 }
 [data-testid="stMetric"] label {
-    font-size: 0.78rem !important;
-    font-weight: 500 !important;
-    text-transform: uppercase;
-    letter-spacing: 0.03em;
+  font-size: 0.75rem !important; font-weight: 500 !important;
+  text-transform: uppercase; letter-spacing: 0.04em;
+  color: var(--ink-muted) !important;
 }
+[data-testid="stMetricValue"] { font-weight: 600 !important; letter-spacing: -0.02em; }
 
-/* Shape: rounded expanders */
+/* Expanders */
 div[data-testid="stExpander"] {
-    border-radius: 10px !important;
+  border-radius: var(--radius-card) !important;
+  border: 1px solid var(--divider) !important;
+  background: white !important;
 }
 div[data-testid="stExpander"] summary {
-    font-weight: 500 !important;
+  font-weight: 500 !important; font-size: 14px;
 }
 
-/* Shape: rounded containers (API cards) */
+/* Containers (API cards) */
 div[data-testid="stVerticalBlock"] > div[data-testid="stVerticalBlockBorderWrapper"] {
-    border-radius: 10px !important;
+  border-radius: var(--radius-card) !important;
+  border-color: var(--divider) !important;
 }
 
-/* Shape: rounded alerts / dataframe */
+/* Alerts */
 .stAlert, div[data-baseweb="notification"] {
-    border-radius: 10px !important;
+  border-radius: var(--radius-card) !important;
+  font-size: 14px !important;
 }
+
+/* DataFrame */
 [data-testid="stDataFrame"] {
-    border-radius: 10px !important;
-    overflow: hidden !important;
+  border-radius: var(--radius-card) !important;
+  overflow: hidden !important;
+  border: 1px solid var(--divider) !important;
 }
 
-/* Shape: multiselect tags */
-span[data-baseweb="tag"] {
-    border-radius: 6px !important;
+/* Multiselect tags */
+span[data-baseweb="tag"] { border-radius: var(--radius-btn) !important; }
+
+/* Divider */
+hr { border-color: var(--divider) !important; opacity: 0.6; }
+
+/* Sidebar */
+section[data-testid="stSidebar"] {
+  background: var(--surface) !important;
+  border-right: 1px solid var(--divider) !important;
 }
-
-/* Metric help text */
-.mh { font-size: 0.75rem; color: #86868b; margin-top: -0.3rem; margin-bottom: 0.5rem; line-height: 1.35; }
-.mh .up { color: #34c759; font-weight: 600; }
-.mh .down { color: #ff3b30; font-weight: 600; }
-
-/* Info box custom */
-.ib { background: #f5f5f7; border: 1px solid #e8e8ed; border-radius: 10px; padding: 0.8rem 1rem; margin-bottom: 0.8rem; font-size: 0.85rem; }
 
 /* Scrollbar */
 ::-webkit-scrollbar { width: 6px; }
-::-webkit-scrollbar-thumb { background: #d2d2d7; border-radius: 3px; }
+::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
 ::-webkit-scrollbar-track { background: transparent; }
+
+/* ── Utility Classes ── */
+.mh { font-size: 0.75rem; color: var(--ink-muted); margin-top: -0.3rem; margin-bottom: 0.5rem; line-height: 1.35; }
+.mh .up { color: var(--success); font-weight: 600; }
+.mh .down { color: var(--error); font-weight: 600; }
+.ib { background: var(--surface); border: 1px solid var(--divider); border-radius: var(--radius-card); padding: 12px 16px; margin-bottom: 12px; font-size: 0.85rem; }
 </style>
 """, unsafe_allow_html=True)
 
@@ -476,15 +673,161 @@ def _help(cn: str, en: str, arrow: str = "") -> None:
     st.markdown(f"<div class='mh'>{cn} / <em>{en}</em>{a}</div>", unsafe_allow_html=True)
 
 
-# ─── Page Title ─────────────────────────────────────────────────────
+# ─── GitHub Stars ───────────────────────────────────────────────────
 
-st.title("Genesis v2")
-st.caption("Multi-LLM AGI Evolution Platform / 多 LLM 语义荒野 AGI 演化平台")
+@st.cache_data(ttl=300)
+def _fetch_github_stars() -> int | None:
+    """Fetch real-time star count from GitHub API."""
+    try:
+        import httpx
+        resp = httpx.get(
+            "https://api.github.com/repos/TimeCraker/genesis-v2",
+            timeout=5.0,
+            headers={"Accept": "application/vnd.github.v3+json"},
+        )
+        if resp.status_code == 200:
+            return resp.json().get("stargazers_count", 0)
+    except Exception:
+        pass
+    return None
+
+
+# ─── Demo Data Generator ───────────────────────────────────────────
+
+def _generate_demo_status() -> dict:
+    """Generate realistic demo experiment status for display when no real data exists."""
+    rng = random.Random(42)
+    history = []
+    for gen in range(1, 21):
+        t = gen / 20.0
+        best_fit = 2254 + (6308 - 2254) * (1 / (1 + math.exp(-8 * (t - 0.4))))
+        mean_fit = best_fit * (0.5 + 0.3 * t)
+        noise = lambda: rng.uniform(-30, 30)
+        history.append({
+            "generation": gen,
+            "alive_count": max(120, int(200 - gen * 3.5 + rng.randint(-5, 5))),
+            "mean_fitness": round(mean_fit + noise(), 1),
+            "best_fitness": round(best_fit + noise() * 0.5, 1),
+            "mean_energy": round(5000 - gen * 85 + noise(), 1),
+            "mean_pred_err": round(max(0.05, 1.0 - gen * 0.042 + rng.random() * 0.04), 3),
+            "islands": [
+                {"island": "Explorer", "best_fitness": round(best_fit * 1.05 + noise(), 1),
+                 "mean_fitness": round(mean_fit * 0.9 + noise(), 1),
+                 "alive": max(15, 50 - gen), "mean_energy": round(4000 - gen * 65 + noise(), 1)},
+                {"island": "Exploiter", "best_fitness": round(best_fit * 0.98 + noise(), 1),
+                 "mean_fitness": round(mean_fit * 1.1 + noise(), 1),
+                 "alive": max(20, int(50 - gen * 0.5)), "mean_energy": round(4500 - gen * 55 + noise(), 1)},
+                {"island": "RecurrentOnly", "best_fitness": round(best_fit * 0.9 + noise(), 1),
+                 "mean_fitness": round(mean_fit * 0.85 + noise(), 1),
+                 "alive": max(10, int(50 - gen * 1.5)), "mean_energy": round(3500 - gen * 75 + noise(), 1)},
+                {"island": "ShortcutOnly", "best_fitness": round(best_fit * 0.85 + noise(), 1),
+                 "mean_fitness": round(mean_fit * 0.8 + noise(), 1),
+                 "alive": max(5, int(50 - gen * 2)), "mean_energy": round(3000 - gen * 90 + noise(), 1)},
+            ],
+        })
+    history.reverse()
+
+    island_states = [
+        {"island": "Explorer", "alive": 32, "best_fitness": 6543.2, "mean_fitness": 4210.5, "mean_energy": 2850.0},
+        {"island": "Exploiter", "alive": 38, "best_fitness": 6308.2, "mean_fitness": 4650.1, "mean_energy": 3100.0},
+        {"island": "RecurrentOnly", "alive": 22, "best_fitness": 5980.5, "mean_fitness": 3580.2, "mean_energy": 2400.0},
+        {"island": "ShortcutOnly", "alive": 15, "best_fitness": 5420.8, "mean_fitness": 3100.6, "mean_energy": 1950.0},
+    ]
+    top_agents = [
+        [1, "elite-001", 6543.2, 4200.0, 2000, 22, 48],
+        [2, "elite-002", 6308.2, 3800.0, 1980, 18, 42],
+        [3, "elite-003", 6195.7, 3650.0, 1950, 20, 45],
+        [4, "elite-004", 5980.5, 3200.0, 1900, 16, 38],
+        [5, "elite-005", 5870.1, 3100.0, 1850, 19, 41],
+        [6, "elite-006", 5720.3, 2950.0, 1800, 15, 35],
+        [7, "elite-007", 5650.8, 2800.0, 1780, 17, 39],
+        [8, "elite-008", 5420.8, 2600.0, 1750, 14, 33],
+        [9, "elite-009", 5310.5, 2450.0, 1700, 13, 30],
+        [10, "elite-010", 5180.2, 2300.0, 1650, 12, 28],
+    ]
+    return {
+        "running": False, "generation": 20, "total_generations": 20,
+        "alive_count": 107, "total_agents": 200,
+        "best_fitness": 6543.2, "mean_fitness": 3842.5, "mean_energy": 2575.0,
+        "elapsed_seconds": 847.3,
+        "islands": island_states, "history": history, "top_agents": top_agents,
+        "note": "Demo data / 演示数据 — Phase 2 evolution experiment",
+    }
+
+
+# ─── Backend Connectivity Check ────────────────────────────────────
+
+def _check_backend_connectivity(island_backends: list[str]) -> tuple[bool, str]:
+    """Quick-check if non-mock backends are reachable. Returns (ok, message)."""
+    non_mock = [b for b in island_backends if b != "mock"]
+    if not non_mock:
+        return True, ""
+    try:
+        import httpx
+        for b in set(non_mock):
+            bp = BACKEND_PRESETS[b]
+            url = bp.get("base_url", "")
+            if not url:
+                continue
+            resp = httpx.get(url.rstrip("/") + "/models", timeout=3.0, headers={
+                "Authorization": f"Bearer {os.environ.get(bp['api_key_env'], '')}",
+            })
+            if resp.status_code >= 500:
+                return False, f"{bp['label']} server error (HTTP {resp.status_code})"
+    except httpx.ConnectError:
+        return False, "Cannot connect to backend server"
+    except httpx.TimeoutException:
+        return False, "Backend server timeout"
+    except Exception:
+        return False, "Backend unreachable"
+    return True, ""
+
+
+# ─── Navbar + Page Title + Tabs ────────────────────────────────────
+
+# Inject Inter font
+st.markdown(
+    '<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">',
+    unsafe_allow_html=True,
+)
+
+# GitHub stars
+_star_count = _fetch_github_stars()
+_star_display = f"{_star_count:,}" if _star_count is not None else ""
+
+_GITHUB_SVG = '<svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/></svg>'
+
+st.markdown(f"""
+<div class="gv2-navbar">
+  <span class="gv2-logo">Genesis v2</span>
+  <div class="gv2-nav-right">
+    <a href="https://github.com/TimeCraker/genesis-v2" class="gv2-gh-btn" target="_blank" rel="noopener">
+      {_GITHUB_SVG}
+      <span>{_star_display}</span>
+    </a>
+    <a href="mailto:timecraker@foxmail.com" class="gv2-contact-btn">timecraker@foxmail.com</a>
+  </div>
+</div>
+""", unsafe_allow_html=True)
+
+# Animated page title
+st.markdown("""
+<div class="anim-title" style="padding-top: 8px;">
+  <h1 style="font-size: 2.5rem; font-weight: 600; letter-spacing: -0.025em;
+             color: var(--ink); margin-bottom: 4px; line-height: 1.1;">
+    Genesis v2
+  </h1>
+  <p style="font-size: 1rem; color: var(--ink-secondary); margin-top: 0;
+            letter-spacing: -0.01em;">
+    Multi-LLM AGI Evolution Platform / 多 LLM 语义荒野 AGI 演化平台
+  </p>
+</div>
+""", unsafe_allow_html=True)
 
 tab_cfg, tab_run, tab_mon = st.tabs([
-    "⚙️ Config / 配置",
-    "\U0001f680 Run / 启动",
-    "\U0001f4ca Monitor / 监控",
+    "Config / 配置",
+    "Run / 启动",
+    "Monitor / 监控",
 ])
 
 
@@ -1182,7 +1525,17 @@ with tab_run:
     # ── Launch / 启动 ──
     c1, c2 = st.columns(2)
     with c1:
-        if st.button("\U0001f680 Start / 开始实验", type="primary", use_container_width=True):
+        if st.button("Start / 开始实验", type="primary", use_container_width=True):
+            # Backend connectivity check for non-mock islands
+            _load_api_keys_to_env()
+            needs_backend = any(b != "mock" for b in island_backends)
+            if needs_backend:
+                ok, msg = _check_backend_connectivity(island_backends)
+                if not ok:
+                    st.session_state["show_backend_modal"] = True
+                    st.session_state["backend_err_msg"] = msg
+                    st.rerun()
+
             # Write initial status so Monitor shows data immediately
             DATA_DIR.mkdir(parents=True, exist_ok=True)
             STATUS_FILE.write_text(json.dumps({
@@ -1215,16 +1568,12 @@ with tab_run:
             if seeds_arg:
                 cmd.extend(["--seeds-file", seeds_arg])
 
-            # Reload persisted API keys into env so subprocess inherits them
-            _load_api_keys_to_env()
-
             log_file = DATA_DIR / "experiment.log"
             log_fh = open(log_file, "w", encoding="utf-8")
             proc = subprocess.Popen(
                 cmd, cwd=str(PROJECT_ROOT),
                 stdout=log_fh, stderr=subprocess.STDOUT, text=True,
             )
-            # Keep file handle alive in session state to prevent GC
             st.session_state["exp_log_fh"] = log_fh
             st.session_state["exp_pid"] = proc.pid
             st.session_state["exp_log_file"] = str(log_file)
@@ -1232,7 +1581,7 @@ with tab_run:
             st.caption(f"Log: `{log_file}`")
 
     with c2:
-        if st.button("⏹ Stop / 停止", type="secondary", use_container_width=True):
+        if st.button("Stop / 停止", type="secondary", use_container_width=True):
             pid = _get_running_pid()
             if pid:
                 try:
@@ -1240,7 +1589,6 @@ with tab_run:
                     st.warning(f"Killed PID {pid}")
                 except (OSError, ProcessLookupError):
                     st.info("Already finished / 已结束")
-                # Mark status as finished
                 status = _load_status()
                 if status:
                     status["running"] = False
@@ -1249,6 +1597,29 @@ with tab_run:
                 st.session_state.pop("exp_pid", None)
             else:
                 st.info("No experiment running / 无运行中的实验")
+
+    # ── Backend Not Started Modal / 后端未启动弹窗 ──
+    if st.session_state.get("show_backend_modal"):
+        err_msg = st.session_state.get("backend_err_msg", "Backend unreachable")
+        st.markdown(f"""
+<div class="gv2-modal-overlay">
+  <div class="gv2-modal-card">
+    <div class="gv2-modal-icon">!</div>
+    <h3>Backend 未启动</h3>
+    <p>LLM backend is not running ({err_msg}).<br>
+    Please start the backend first, or switch all islands to Mock mode.<br>
+    <span style="font-size:13px;color:var(--ink-muted)">LLM 后端未运行，请先启动后端或将所有岛屿切换为 Mock 模式。</span></p>
+    <a href="https://github.com/TimeCraker/genesis-v2" target="_blank" rel="noopener" class="gv2-modal-gh-btn">
+      {_GITHUB_SVG}
+      <span>Explore on GitHub / 探索项目</span>
+    </a>
+  </div>
+</div>
+""", unsafe_allow_html=True)
+        if st.button("Close / 关闭", key="close_backend_modal", use_container_width=True):
+            st.session_state.pop("show_backend_modal", None)
+            st.session_state.pop("backend_err_msg", None)
+            st.rerun()
 
 
 # ================================================================
@@ -1263,15 +1634,18 @@ def monitor_panel():
     _mark_stale_if_dead()
     status = _load_status()
 
+    demo_mode = False
     if status is None:
+        status = _generate_demo_status()
+        demo_mode = True
         st.markdown(
-            '<div class="ib">No experiment data yet. Launch an experiment from the Run tab. / '
-            '暂无实验数据。请在「启动」标签页启动实验。</div>',
+            '<div class="ib">📊 Showing demo data / 演示数据 — '
+            'Launch an experiment from the Run tab to see real results. / '
+            '在「启动」标签页启动实验查看真实结果。</div>',
             unsafe_allow_html=True,
         )
-        return
 
-    running = status.get("running", False)
+    running = status.get("running", False) and not demo_mode
     history = status.get("history", [])
 
     # Inject live data point so charts appear even before first generation completes
@@ -1319,17 +1693,27 @@ def monitor_panel():
         tick_in_gen = status.get("tick_in_gen", 0)
         ticks_per_gen = status.get("ticks_per_gen", 0)
         elapsed = status.get("elapsed_seconds", 0)
-        st.success(f"▶ Running / 运行中 — Gen {gen}/{total_gens}  |  "
-                   f"Tick {tick_in_gen}/{ticks_per_gen}  |  "
-                   f"Elapsed {elapsed:.0f}s  |  "
-                   f"auto-refresh 5s")
+        st.markdown(
+            f'<span class="gv2-live-dot"></span> '
+            f'<b>Running / 运行中</b> — Gen {gen}/{total_gens}  |  '
+            f'Tick {tick_in_gen}/{ticks_per_gen}  |  '
+            f'Elapsed {elapsed:.0f}s  |  auto-refresh 5s',
+            unsafe_allow_html=True,
+        )
         if ticks_per_gen > 0:
             st.progress(tick_in_gen / ticks_per_gen)
-            st.caption("进度条 = 当前代内 tick 完成度 (tick/每代总tick)。满格代表一代结束，进入繁殖和下一代。")
-            st.caption("Progress bar = current generation's tick completion (tick / ticks_per_gen). "
-                       "Full = generation ends, breeding + next gen starts.")
+    elif demo_mode:
+        st.markdown(
+            '<span class="gv2-dot-static"></span> '
+            '<b>Demo Mode / 演示模式</b> — Gen 20/20  |  Completed',
+            unsafe_allow_html=True,
+        )
     else:
-        st.info("⏹ Finished / 已结束")
+        st.markdown(
+            '<span class="gv2-dot-static"></span> '
+            '<b>Finished / 已结束</b>',
+            unsafe_allow_html=True,
+        )
 
     # ── KPI Row / 核心指标（带增益箭头） ──
     k1, k2, k3, k4 = st.columns(4)
