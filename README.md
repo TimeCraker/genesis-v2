@@ -1,4 +1,6 @@
-<div align="center">
+﻿<div align="center">
+
+[![CI](https://github.com/TimeCraker/genesis-v2/actions/workflows/ci.yml/badge.svg)](https://github.com/TimeCraker/genesis-v2/actions/workflows/ci.yml)
 
 # Project Genesis v2.0
 
