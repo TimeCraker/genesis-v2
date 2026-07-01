@@ -1,0 +1,144 @@
+﻿<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1280 600" width="1280" height="600" font-family="-apple-system,Inter,sans-serif">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#020617"/>
+      <stop offset="100%" stop-color="#1a0b2e"/>
+    </linearGradient>
+    <linearGradient id="dna" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#22d3ee"/>
+      <stop offset="50%" stop-color="#a855f7"/>
+      <stop offset="100%" stop-color="#ec4899"/>
+    </linearGradient>
+    <linearGradient id="pop" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#a855f7"/>
+      <stop offset="100%" stop-color="#7c3aed"/>
+    </linearGradient>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#94a3b8"/>
+    </marker>
+    <filter id="glow" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur stdDeviation="3"/>
+    </filter>
+  </defs>
+
+  <rect width="1280" height="600" fill="url(#bg)"/>
+
+  <text x="640" y="40" text-anchor="middle" font-size="22" font-weight="800" fill="#e2e8f0">Evolution Loop · 自主进化循环</text>
+  <text x="640" y="62" text-anchor="middle" font-size="11" fill="#64748b" letter-spacing="3">BIRTH → MUTATE → EXPLORE → EVALUATE → REAP → INHERIT</text>
+
+  <!-- center: evolution loop -->
+  <g transform="translate(640, 340)">
+    <circle r="170" fill="none" stroke="url(#dna)" stroke-width="2" stroke-dasharray="6 6" opacity="0.5"/>
+    <circle r="120" fill="none" stroke="url(#dna)" stroke-width="1" opacity="0.3"/>
+    <text y="0" text-anchor="middle" font-size="20" font-weight="900" fill="url(#dna)">EVOLUTION</text>
+    <text y="22" text-anchor="middle" font-size="10" fill="#64748b" letter-spacing="2">closed loop</text>
+    <text y="40" text-anchor="middle" font-size="9" fill="#475569">tick: 0.5 Hz</text>
+  </g>
+
+  <!-- 6 stages around the loop (hexagonal positions) -->
+  <!-- TOP: BIRTH -->
+  <g transform="translate(640, 130)">
+    <rect x="-100" y="-30" width="200" height="60" rx="12" fill="#0f172a" stroke="url(#dna)" stroke-width="2"/>
+    <text x="0" y="-2" text-anchor="middle" font-size="14" font-weight="700" fill="#22d3ee">🥚 BIRTH</text>
+    <text x="0" y="18" text-anchor="middle" font-size="10" fill="#94a3b8">Breeder spawns genomes</text>
+  </g>
+  <!-- TOP-RIGHT: MUTATE -->
+  <g transform="translate(910, 200)">
+    <rect x="-100" y="-30" width="200" height="60" rx="12" fill="#0f172a" stroke="url(#dna)" stroke-width="2"/>
+    <text x="0" y="-2" text-anchor="middle" font-size="14" font-weight="700" fill="#67e8f9">🧬 MUTATE</text>
+    <text x="0" y="18" text-anchor="middle" font-size="10" fill="#94a3b8">Genome crossover + noise</text>
+  </g>
+  <!-- BOTTOM-RIGHT: EXPLORE -->
+  <g transform="translate(910, 480)">
+    <rect x="-100" y="-30" width="200" height="60" rx="12" fill="#0f172a" stroke="url(#dna)" stroke-width="2"/>
+    <text x="0" y="-2" text-anchor="middle" font-size="14" font-weight="700" fill="#a855f7">🔭 EXPLORE</text>
+    <text x="0" y="18" text-anchor="middle" font-size="10" fill="#94a3b8">Multi-LLM semantic env</text>
+  </g>
+  <!-- BOTTOM: EVALUATE -->
+  <g transform="translate(640, 550)">
+    <rect x="-100" y="-30" width="200" height="60" rx="12" fill="#0f172a" stroke="url(#dna)" stroke-width="2"/>
+    <text x="0" y="-2" text-anchor="middle" font-size="14" font-weight="700" fill="#d8b4fe">⚖️ EVALUATE</text>
+    <text x="0" y="18" text-anchor="middle" font-size="10" fill="#94a3b8">Reputation + probes</text>
+  </g>
+  <!-- BOTTOM-LEFT: REAP -->
+  <g transform="translate(370, 480)">
+    <rect x="-100" y="-30" width="200" height="60" rx="12" fill="#0f172a" stroke="url(#dna)" stroke-width="2"/>
+    <text x="0" y="-2" text-anchor="middle" font-size="14" font-weight="700" fill="#ec4899">💀 REAP</text>
+    <text x="0" y="18" text-anchor="middle" font-size="10" fill="#94a3b8">Cull low-rep genomes</text>
+  </g>
+  <!-- TOP-LEFT: INHERIT -->
+  <g transform="translate(370, 200)">
+    <rect x="-100" y="-30" width="200" height="60" rx="12" fill="#0f172a" stroke="url(#dna)" stroke-width="2"/>
+    <text x="0" y="-2" text-anchor="middle" font-size="14" font-weight="700" fill="#f9a8d4">🏆 INHERIT</text>
+    <text x="0" y="18" text-anchor="middle" font-size="10" fill="#94a3b8">Elite → survivor bank</text>
+  </g>
+
+  <!-- arrows around the loop -->
+  <g stroke="url(#dna)" stroke-width="2" fill="none" marker-end="url(#arrow)">
+    <path d="M 740 145 L 850 195"/>
+    <path d="M 990 230 L 990 450"/>
+    <path d="M 850 490 L 740 540"/>
+    <path d="M 540 540 L 430 490"/>
+    <path d="M 290 450 L 290 230"/>
+    <path d="M 430 195 L 540 145"/>
+  </g>
+
+  <!-- left sidebar: persistence stack -->
+  <g transform="translate(60, 130)">
+    <rect width="220" height="380" rx="14" fill="#0f172a" stroke="#1e293b" stroke-width="1"/>
+    <text x="110" y="32" text-anchor="middle" font-size="14" font-weight="800" fill="#e2e8f0">PERSISTENCE LAYER</text>
+    <line x1="20" y1="48" x2="200" y2="48" stroke="#1e293b"/>
+    <g font-size="11">
+      <text x="20" y="78" font-weight="700" fill="#a855f7">DuckDB</text>
+      <text x="20" y="94" fill="#64748b">genome + reputation</text>
+      <text x="20" y="124" font-weight="700" fill="#22d3ee">CommBus</text>
+      <text x="20" y="140" fill="#64748b">agent-to-agent pub/sub</text>
+      <text x="20" y="170" font-weight="700" fill="#22c55e">Survivor Bank</text>
+      <text x="20" y="186" fill="#64748b">elite agents on disk</text>
+      <text x="20" y="216" font-weight="700" fill="#f59e0b">Island Topology</text>
+      <text x="20" y="232" fill="#64748b">migration between pops</text>
+      <text x="20" y="262" font-weight="700" fill="#ec4899">Gen Memory</text>
+      <text x="20" y="278" fill="#64748b">lineage tree</text>
+    </g>
+    <line x1="20" y1="300" x2="200" y2="300" stroke="#1e293b"/>
+    <text x="110" y="324" text-anchor="middle" font-size="10" fill="#475569">all state is local-first</text>
+    <text x="110" y="342" text-anchor="middle" font-size="10" fill="#475569">no cloud, no auth</text>
+    <text x="110" y="360" text-anchor="middle" font-size="10" fill="#a855f7" font-weight="700">→ pluggable backends</text>
+  </g>
+
+  <!-- right sidebar: LLM swarm -->
+  <g transform="translate(1000, 130)">
+    <rect width="220" height="380" rx="14" fill="#0f172a" stroke="#1e293b" stroke-width="1"/>
+    <text x="110" y="32" text-anchor="middle" font-size="14" font-weight="800" fill="#e2e8f0">LLM SWARM</text>
+    <line x1="20" y1="48" x2="200" y2="48" stroke="#1e293b"/>
+    <g font-size="11">
+      <g transform="translate(0,0)">
+        <rect x="20" y="60" width="180" height="36" rx="6" fill="#1e293b" stroke="#22d3ee" stroke-width="1"/>
+        <text x="32" y="76" font-weight="700" fill="#67e8f9">🧠 DeepSeek</text>
+        <text x="32" y="90" fill="#64748b">cheap + fast probe</text>
+      </g>
+      <g transform="translate(0,46)">
+        <rect x="20" y="60" width="180" height="36" rx="6" fill="#1e293b" stroke="#a855f7" stroke-width="1"/>
+        <text x="32" y="76" font-weight="700" fill="#d8b4fe">🧠 SiliconFlow</text>
+        <text x="32" y="90" fill="#64748b">balanced mid-cost</text>
+      </g>
+      <g transform="translate(0,92)">
+        <rect x="20" y="60" width="180" height="36" rx="6" fill="#1e293b" stroke="#ec4899" stroke-width="1"/>
+        <text x="32" y="76" font-weight="700" fill="#f9a8d4">🧠 智谱 GLM</text>
+        <text x="32" y="90" fill="#64748b">CN-native judge</text>
+      </g>
+      <g transform="translate(0,138)">
+        <rect x="20" y="60" width="180" height="36" rx="6" fill="#1e293b" stroke="#22c55e" stroke-width="1"/>
+        <text x="32" y="76" font-weight="700" fill="#86efac">🧠 OpenAI</text>
+        <text x="32" y="90" fill="#64748b">strongest baseline</text>
+      </g>
+    </g>
+    <line x1="20" y1="284" x2="200" y2="284" stroke="#1e293b"/>
+    <text x="110" y="306" text-anchor="middle" font-size="10" fill="#475569">all providers</text>
+    <text x="110" y="322" text-anchor="middle" font-size="10" fill="#475569">OpenAI-compatible</text>
+    <text x="110" y="346" text-anchor="middle" font-size="10" fill="#a855f7" font-weight="700">+ Mock Env</text>
+    <text x="110" y="362" text-anchor="middle" font-size="10" fill="#64748b">for unit tests</text>
+  </g>
+
+  <text x="640" y="585" text-anchor="middle" font-size="10" fill="#475569">© 2026 TimeCraker · Local-first · No cloud lock-in · All state in DuckDB + Survivor Bank</text>
+</svg>

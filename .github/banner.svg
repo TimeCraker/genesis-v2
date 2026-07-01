@@ -1,0 +1,100 @@
+﻿<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1280 320" width="1280" height="320">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#020617"/>
+      <stop offset="50%" stop-color="#1a0b2e"/>
+      <stop offset="100%" stop-color="#020617"/>
+    </linearGradient>
+    <linearGradient id="dna" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#22d3ee"/>
+      <stop offset="50%" stop-color="#a855f7"/>
+      <stop offset="100%" stop-color="#ec4899"/>
+    </linearGradient>
+    <radialGradient id="sun" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#fbbf24" stop-opacity="0.3"/>
+      <stop offset="100%" stop-color="#fbbf24" stop-opacity="0"/>
+    </radialGradient>
+    <filter id="blur"><feGaussianBlur stdDeviation="2"/></filter>
+  </defs>
+
+  <rect width="1280" height="320" fill="url(#bg)"/>
+
+  <!-- background dots -->
+  <g fill="#a855f7" opacity="0.4">
+    <circle cx="120" cy="60" r="1"/>
+    <circle cx="200" cy="180" r="0.8"/>
+    <circle cx="320" cy="100" r="1.2"/>
+    <circle cx="500" cy="50" r="0.8"/>
+    <circle cx="700" cy="240" r="1"/>
+    <circle cx="900" cy="80" r="0.8"/>
+    <circle cx="1100" cy="200" r="1.2"/>
+    <circle cx="1180" cy="60" r="0.8"/>
+    <circle cx="80" cy="260" r="1"/>
+    <circle cx="240" cy="280" r="0.6"/>
+    <circle cx="640" cy="40" r="0.8"/>
+  </g>
+
+  <!-- sun glow behind title -->
+  <circle cx="640" cy="160" r="280" fill="url(#sun)"/>
+
+  <!-- DNA double helix on left -->
+  <g transform="translate(80, 80)" opacity="0.8">
+    <path d="M 0 0 Q 40 40 0 80 Q -40 120 0 160" stroke="url(#dna)" stroke-width="2" fill="none"/>
+    <path d="M 60 0 Q 20 40 60 80 Q 100 120 60 160" stroke="url(#dna)" stroke-width="2" fill="none"/>
+    <g stroke="url(#dna)" stroke-width="1" opacity="0.6">
+      <line x1="0" y1="20" x2="60" y2="20"/>
+      <line x1="15" y1="50" x2="45" y2="50"/>
+      <line x1="0" y1="80" x2="60" y2="80"/>
+      <line x1="15" y1="110" x2="45" y2="110"/>
+      <line x1="0" y1="140" x2="60" y2="140"/>
+    </g>
+  </g>
+
+  <!-- DNA double helix on right (mirrored) -->
+  <g transform="translate(1140, 80) scale(-1, 1)" opacity="0.8">
+    <path d="M 0 0 Q 40 40 0 80 Q -40 120 0 160" stroke="url(#dna)" stroke-width="2" fill="none"/>
+    <path d="M 60 0 Q 20 40 60 80 Q 100 120 60 160" stroke="url(#dna)" stroke-width="2" fill="none"/>
+    <g stroke="url(#dna)" stroke-width="1" opacity="0.6">
+      <line x1="0" y1="20" x2="60" y2="20"/>
+      <line x1="15" y1="50" x2="45" y2="50"/>
+      <line x1="0" y1="80" x2="60" y2="80"/>
+      <line x1="15" y1="110" x2="45" y2="110"/>
+      <line x1="0" y1="140" x2="60" y2="140"/>
+    </g>
+  </g>
+
+  <!-- main title -->
+  <text x="640" y="140" text-anchor="middle" font-family="-apple-system,BlinkMacSystemFont,Inter,sans-serif" font-size="58" font-weight="900" fill="#e2e8f0" letter-spacing="-1">Project Genesis</text>
+  <text x="640" y="180" text-anchor="middle" font-family="-apple-system,sans-serif" font-size="16" font-weight="500" fill="#a855f7" letter-spacing="8">v 2 . 0 · AUTONOMOUS AGI EVOLUTION</text>
+
+  <!-- tagline -->
+  <text x="640" y="220" text-anchor="middle" font-family="-apple-system,sans-serif" font-size="13" fill="#94a3b8">Multi-LLM Semantic Wilderness · Agent genomes that mutate, compete, and inherit</text>
+
+  <!-- stats pills -->
+  <g transform="translate(640, 250)" font-family="ui-monospace,SF Mono,monospace" font-size="11" font-weight="700">
+    <g transform="translate(-260, 0)">
+      <rect x="-50" y="-12" width="100" height="24" rx="12" fill="#22c55e" fill-opacity="0.1" stroke="#22c55e" stroke-width="1"/>
+      <text x="0" y="5" text-anchor="middle" fill="#86efac">24+ TESTS</text>
+    </g>
+    <g transform="translate(-100, 0)">
+      <rect x="-50" y="-12" width="100" height="24" rx="12" fill="#a855f7" fill-opacity="0.1" stroke="#a855f7" stroke-width="1"/>
+      <text x="0" y="5" text-anchor="middle" fill="#d8b4fe">PYTHON 3.12</text>
+    </g>
+    <g transform="translate(60, 0)">
+      <rect x="-50" y="-12" width="100" height="24" rx="12" fill="#22d3ee" fill-opacity="0.1" stroke="#22d3ee" stroke-width="1"/>
+      <text x="0" y="5" text-anchor="middle" fill="#67e8f9">DUCKDB</text>
+    </g>
+    <g transform="translate(220, 0)">
+      <rect x="-50" y="-12" width="100" height="24" rx="12" fill="#f59e0b" fill-opacity="0.1" stroke="#f59e0b" stroke-width="1"/>
+      <text x="0" y="5" text-anchor="middle" fill="#fcd34d">STREAMLIT</text>
+    </g>
+  </g>
+
+  <!-- corner -->
+  <g transform="translate(60, 60)">
+    <text font-family="ui-monospace,SF Mono,monospace" font-size="11" fill="#64748b">🧬 evolution platform</text>
+  </g>
+  <g transform="translate(1220, 60)" text-anchor="end">
+    <text font-family="ui-monospace,SF Mono,monospace" font-size="11" fill="#64748b">github.com/TimeCraker/genesis-v2</text>
+  </g>
+</svg>
