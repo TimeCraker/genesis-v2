@@ -338,7 +338,11 @@ div[data-testid="stMetric"] {
   text-transform: uppercase; letter-spacing: 0.04em;
   color: var(--ink-muted) !important;
 }
-[data-testid="stMetricValue"] { font-weight: 600 !important; letter-spacing: -0.02em; }
+[data-testid="stMetricValue"] { font-weight: 600 !important; letter-spacing: -0.02em; color: var(--ink) !important; }
+
+/* Radio / select — readable on light theme */
+div[data-testid="stRadio"] label, div[data-testid="stRadio"] p,
+div[data-testid="stSelectbox"] label { color: var(--ink) !important; }
 
 /* Expanders */
 div[data-testid="stExpander"] {
