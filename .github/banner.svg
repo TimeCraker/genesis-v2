@@ -1,74 +1,100 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="300" viewBox="0 0 1280 300" role="img" aria-label="Genesis v2">
+﻿<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1280 320" width="1280" height="320">
   <defs>
-    <style>
-      .wm  { font: 900 54px 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', sans-serif; fill: #FAF6F0; letter-spacing: 1px; }
-      .tag { font: 600 12px 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', sans-serif; fill: #CC785C; letter-spacing: 5px; }
-      .sub { font: 400 14.5px 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', sans-serif; fill: #A8A29E; letter-spacing: 0.5px; }
-      .st  { font: 600 12.5px ui-monospace, 'Cascadia Mono', Consolas, monospace; fill: #D6D3D1; letter-spacing: 1px; }
-      .std { font: 400 10.5px 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', sans-serif; fill: #78716C; letter-spacing: 1px; }
-      .icon{ stroke: #CC785C; stroke-width: 1.8; fill: none; stroke-linecap: round; stroke-linejoin: round; }
-      .soft{ stroke: #57534E; stroke-width: 1.3; fill: none; stroke-linecap: round; stroke-linejoin: round; }
-    </style>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#020617"/>
+      <stop offset="50%" stop-color="#1a0b2e"/>
+      <stop offset="100%" stop-color="#020617"/>
+    </linearGradient>
+    <linearGradient id="dna" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#22d3ee"/>
+      <stop offset="50%" stop-color="#a855f7"/>
+      <stop offset="100%" stop-color="#ec4899"/>
+    </linearGradient>
+    <radialGradient id="sun" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#fbbf24" stop-opacity="0.3"/>
+      <stop offset="100%" stop-color="#fbbf24" stop-opacity="0"/>
+    </radialGradient>
+    <filter id="blur"><feGaussianBlur stdDeviation="2"/></filter>
   </defs>
 
-  <rect width="1280" height="300" rx="18" fill="#1C1917"/>
+  <rect width="1280" height="320" fill="url(#bg)"/>
 
-  <!-- 背景点阵 -->
-  <g fill="#57534E" opacity="0.5">
-    <circle cx="700" cy="52" r="1"/><circle cx="780" cy="240" r="1.1"/><circle cx="1190" cy="60" r="1"/>
-    <circle cx="1246" cy="180" r="0.8"/><circle cx="688" cy="150" r="0.8"/><circle cx="1120" cy="258" r="1"/>
+  <!-- background dots -->
+  <g fill="#a855f7" opacity="0.4">
+    <circle cx="120" cy="60" r="1"/>
+    <circle cx="200" cy="180" r="0.8"/>
+    <circle cx="320" cy="100" r="1.2"/>
+    <circle cx="500" cy="50" r="0.8"/>
+    <circle cx="700" cy="240" r="1"/>
+    <circle cx="900" cy="80" r="0.8"/>
+    <circle cx="1100" cy="200" r="1.2"/>
+    <circle cx="1180" cy="60" r="0.8"/>
+    <circle cx="80" cy="260" r="1"/>
+    <circle cx="240" cy="280" r="0.6"/>
+    <circle cx="640" cy="40" r="0.8"/>
   </g>
 
-  <!-- ── 左：wordmark ── -->
-  <rect x="56" y="54" width="26" height="2" fill="#CC785C"/>
-  <text x="56" y="80" class="tag">GENESIS · V2</text>
-  <text x="54" y="148" class="wm">Project Genesis</text>
-  <text x="56" y="180" class="sub">多 LLM 语义荒原 · Agent 基因组自主进化实验平台</text>
+  <!-- sun glow behind title -->
+  <circle cx="640" cy="160" r="280" fill="url(#sun)"/>
 
-  <!-- ── 右：DNA 双螺旋 ── -->
-  <g transform="translate(1060,150)" opacity="0.9">
-    <!-- 骨架 -->
-    <path d="M 0 -92 Q 46 -46 0 0 Q -46 46 0 92" stroke="#CC785C" stroke-width="2" fill="none"/>
-    <path d="M 76 -92 Q 30 -46 76 0 Q 122 46 76 92" stroke="#57534E" stroke-width="1.6" fill="none"/>
-    <!-- 碱基横档：coral = 存活，灰 = 淘汰 -->
-    <line x1="6"  y1="-76" x2="70" y2="-76" stroke="#57534E" stroke-width="1.2"/>
-    <line x1="20" y1="-46" x2="56" y2="-46" stroke="#CC785C" stroke-width="1.6"/>
-    <line x1="6"  y1="-16" x2="70" y2="-16" stroke="#CC785C" stroke-width="1.6"/>
-    <line x1="20" y1="14"  x2="56" y2="14"  stroke="#57534E" stroke-width="1.2"/>
-    <line x1="6"  y1="46"  x2="70" y2="46"  stroke="#CC785C" stroke-width="1.6"/>
-    <line x1="20" y1="76"  x2="56" y2="76"  stroke="#57534E" stroke-width="1.2"/>
-    <!-- 节点 -->
-    <circle cx="0" cy="-92" r="3" fill="#CC785C"/>
-    <circle cx="76" cy="-92" r="2.4" fill="#57534E"/>
-    <circle cx="0" cy="0" r="3" fill="#CC785C"/>
-    <circle cx="76" cy="0" r="2.4" fill="#57534E"/>
-    <circle cx="0" cy="92" r="3" fill="#CC785C"/>
-    <circle cx="76" cy="92" r="2.4" fill="#57534E"/>
+  <!-- DNA double helix on left -->
+  <g transform="translate(80, 80)" opacity="0.8">
+    <path d="M 0 0 Q 40 40 0 80 Q -40 120 0 160" stroke="url(#dna)" stroke-width="2" fill="none"/>
+    <path d="M 60 0 Q 20 40 60 80 Q 100 120 60 160" stroke="url(#dna)" stroke-width="2" fill="none"/>
+    <g stroke="url(#dna)" stroke-width="1" opacity="0.6">
+      <line x1="0" y1="20" x2="60" y2="20"/>
+      <line x1="15" y1="50" x2="45" y2="50"/>
+      <line x1="0" y1="80" x2="60" y2="80"/>
+      <line x1="15" y1="110" x2="45" y2="110"/>
+      <line x1="0" y1="140" x2="60" y2="140"/>
+    </g>
   </g>
 
-  <!-- ── 底部 stats ── -->
-  <line x1="56" y1="226" x2="1224" y2="226" stroke="#2E2A27"/>
-  <g transform="translate(56,254)">
-    <circle cx="5" cy="-4" r="3" fill="#7BA05B"/>
-    <text x="15" y="0" class="st">24 TESTS</text>
-    <text x="15" y="17" class="std">回归全绿</text>
-
-    <g transform="translate(250,0)">
-      <circle cx="5" cy="-4" r="3" fill="#CC785C"/>
-      <text x="15" y="0" class="st">6-STAGE LOOP</text>
-      <text x="15" y="17" class="std">进化闭环</text>
+  <!-- DNA double helix on right (mirrored) -->
+  <g transform="translate(1140, 80) scale(-1, 1)" opacity="0.8">
+    <path d="M 0 0 Q 40 40 0 80 Q -40 120 0 160" stroke="url(#dna)" stroke-width="2" fill="none"/>
+    <path d="M 60 0 Q 20 40 60 80 Q 100 120 60 160" stroke="url(#dna)" stroke-width="2" fill="none"/>
+    <g stroke="url(#dna)" stroke-width="1" opacity="0.6">
+      <line x1="0" y1="20" x2="60" y2="20"/>
+      <line x1="15" y1="50" x2="45" y2="50"/>
+      <line x1="0" y1="80" x2="60" y2="80"/>
+      <line x1="15" y1="110" x2="45" y2="110"/>
+      <line x1="0" y1="140" x2="60" y2="140"/>
     </g>
+  </g>
 
-    <g transform="translate(500,0)">
-      <circle cx="5" cy="-4" r="3" fill="#CC785C"/>
-      <text x="15" y="0" class="st">MULTI-LLM ENV</text>
-      <text x="15" y="17" class="std">互为环境</text>
-    </g>
+  <!-- main title -->
+  <text x="640" y="140" text-anchor="middle" font-family="-apple-system,BlinkMacSystemFont,Inter,sans-serif" font-size="58" font-weight="900" fill="#e2e8f0" letter-spacing="-1">Project Genesis</text>
+  <text x="640" y="180" text-anchor="middle" font-family="-apple-system,sans-serif" font-size="16" font-weight="500" fill="#a855f7" letter-spacing="8">v 2 . 0 · AUTONOMOUS AGI EVOLUTION</text>
 
-    <g transform="translate(760,0)">
-      <circle cx="5" cy="-4" r="3" fill="#CC785C"/>
-      <text x="15" y="0" class="st">ZERO CLOUD</text>
-      <text x="15" y="17" class="std">纯本地零云依赖</text>
+  <!-- tagline -->
+  <text x="640" y="220" text-anchor="middle" font-family="-apple-system,sans-serif" font-size="13" fill="#94a3b8">Multi-LLM Semantic Wilderness · Agent genomes that mutate, compete, and inherit</text>
+
+  <!-- stats pills -->
+  <g transform="translate(640, 250)" font-family="ui-monospace,SF Mono,monospace" font-size="11" font-weight="700">
+    <g transform="translate(-260, 0)">
+      <rect x="-50" y="-12" width="100" height="24" rx="12" fill="#22c55e" fill-opacity="0.1" stroke="#22c55e" stroke-width="1"/>
+      <text x="0" y="5" text-anchor="middle" fill="#86efac">24+ TESTS</text>
     </g>
+    <g transform="translate(-100, 0)">
+      <rect x="-50" y="-12" width="100" height="24" rx="12" fill="#a855f7" fill-opacity="0.1" stroke="#a855f7" stroke-width="1"/>
+      <text x="0" y="5" text-anchor="middle" fill="#d8b4fe">PYTHON 3.12</text>
+    </g>
+    <g transform="translate(60, 0)">
+      <rect x="-50" y="-12" width="100" height="24" rx="12" fill="#22d3ee" fill-opacity="0.1" stroke="#22d3ee" stroke-width="1"/>
+      <text x="0" y="5" text-anchor="middle" fill="#67e8f9">DUCKDB</text>
+    </g>
+    <g transform="translate(220, 0)">
+      <rect x="-50" y="-12" width="100" height="24" rx="12" fill="#f59e0b" fill-opacity="0.1" stroke="#f59e0b" stroke-width="1"/>
+      <text x="0" y="5" text-anchor="middle" fill="#fcd34d">STREAMLIT</text>
+    </g>
+  </g>
+
+  <!-- corner -->
+  <g transform="translate(60, 60)">
+    <text font-family="ui-monospace,SF Mono,monospace" font-size="11" fill="#64748b">🧬 evolution platform</text>
+  </g>
+  <g transform="translate(1220, 60)" text-anchor="end">
+    <text font-family="ui-monospace,SF Mono,monospace" font-size="11" fill="#64748b">github.com/TimeCraker/genesis-v2</text>
   </g>
 </svg>
